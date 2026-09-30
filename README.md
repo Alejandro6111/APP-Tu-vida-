@@ -19,6 +19,8 @@ Al abrir:
 
 También se compila un APK en cada ejecución de [GitHub Actions](https://github.com/Alejandro6111/APP-Tu-vida-/actions), disponible en los artefactos del trabajo Android. La compilación pública usa la fuente alternativa de Android, salvo que se incorpore una fuente con licencia adecuada.
 
+El flujo instala explícitamente `platform-tools`, API 35 y build-tools 35.0.0; no solicita el paquete obsoleto `tools` del SDK.
+
 ## Funciones
 
 ### Dinero
