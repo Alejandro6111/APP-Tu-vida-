@@ -1,0 +1,11 @@
+{
+  "name": "mi-plata-clara",
+  "version": "2.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Planificador personal de ingresos, gastos, cuotas, metas y gastos diarios.",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  }
+}
