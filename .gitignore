@@ -1,0 +1,11 @@
+.gradle/
+**/build/
+local.properties
+*.jks
+*.keystore
+.idea/
+artifacts/
+tools/
+android/app/src/main/res/font/segoe_semibold.ttf
+.impeccable/review/
+*.log

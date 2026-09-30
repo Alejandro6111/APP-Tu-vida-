@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-30T02:45:03Z",
+  "title": "Diseño de Tu Vida",
+  "extensions": {
+    "platform": "android",
+    "implementation": "Kotlin · Jetpack Compose · Material 3",
+    "buildPath": "code-first",
+    "sourceOfTruth": {
+      "design": "DESIGN.md",
+      "theme": "android/app/src/main/java/co/tuvida/app/ui/Theme.kt",
+      "navigation": "android/app/src/main/java/co/tuvida/app/ui/App.kt",
+      "components": "android/app/src/main/java/co/tuvida/app/ui/Components.kt",
+      "editors": "android/app/src/main/java/co/tuvida/app/ui/Editors.kt",
+      "health": "android/app/src/main/java/co/tuvida/app/ui/LifeScreens.kt"
+    },
+    "breakpoints": [
+      {
+        "name": "navigation-rail",
+        "value": "600dp",
+        "purpose": "NavigationRail desde 600 dp; NavigationBar por debajo."
+      }
+    ],
+    "nativeComponents": [
+      {
+        "name": "Navegación principal",
+        "symbols": ["NavigationBar", "NavigationBarItem", "NavigationRail", "NavigationRailItem"],
+        "description": "Hoy, Dinero, Agenda, Enfoque y Salud, con iconos Material Outlined y etiquetas."
+      },
+      {
+        "name": "Contexto y acción",
+        "symbols": ["TopAppBar", "IconButton", "FloatingActionButton"],
+        "description": "Ajustes desde la barra superior. Una acción flotante contextual en Agenda, Dinero y Salud."
+      },
+      {
+        "name": "Información agrupada",
+        "symbols": ["Info", "Section", "Metric", "AmountRow", "Surface"],
+        "description": "Roles de color, tipografía y formas MaterialTheme; Info usa surfaceVariant y shapes.medium."
+      },
+      {
+        "name": "Campos y selectores",
+        "symbols": ["Field", "OutlinedTextField", "Choice", "OutlinedButton", "DropdownMenu", "DatePickerDialog", "TimePickerDialog"],
+        "description": "Campos a ancho completo, teclado numérico cuando corresponde y selectores Android de fecha y hora."
+      },
+      {
+        "name": "Edición y respuesta",
+        "symbols": ["ModalBottomSheet", "EditorForm", "SnackbarHost", "AlertDialog"],
+        "description": "Editor desplazable con imePadding; snackbar para mensajes y diálogo para confirmar restauración."
+      },
+      {
+        "name": "Calendario de salud",
+        "symbols": ["HealthScreen", "Surface", "MonthPicker"],
+        "description": "Verde, rojo o neutro según registro explícito; cada día expone fecha, estado y selección en contentDescription."
+      }
+    ],
+    "typographyImplementation": {
+      "roles": "Escala completa Typography de Material 3; todos los roles usan FontWeight.SemiBold.",
+      "fontResource": "segoe_semibold",
+      "fallback": "FontFamily.SansSerif con FontWeight.SemiBold",
+      "units": "sp"
+    },
+    "depthImplementation": "Superficies, formas y elevación de componentes Material 3; sin vocabulario propio de sombras.",
+    "reviewEvidence": {
+      "directory": ".impeccable/review",
+      "captureCount": 12,
+      "captureType": "native-emulator",
+      "verdict": "SHIP",
+      "scope": "Capturas nativas de teléfono, incluidas variantes oscuras y texto aumentado. No demuestra pruebas en hardware Redmi ni una captura de tablet."
+    }
+  },
+  "narrative": {
+    "overview": "Aplicación Android de operación cotidiana. El usuario eligió construir directamente y delegó las decisiones de implementación; la paleta elegante y Segoe UI Semibold son las restricciones visuales. La interfaz se adapta mediante Material 3 al flujo de un teléfono personal."
+  }
+}
