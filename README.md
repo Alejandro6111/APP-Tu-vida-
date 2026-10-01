@@ -81,7 +81,7 @@ Los feeds públicos pueden cambiar horarios o no tener encuentros futuros. Tu Vi
 - Gestión del foco de audio de Android y pausa al desconectar audífonos. Temporizador para pausar en 5, 15, 30, 60 o 90 minutos, cancelable; funciona en el servicio aunque salgas de la pantalla.
 - Cola, canción, posición aproximada, repetición y aleatorio guardados localmente. Al volver a abrir después de cerrar el proceso, la reproducción queda pausada hasta que pulses reproducir. La posición se guarda al cambiar de estado y cada diez segundos durante la reproducción.
 - Buscador integrado de YouTube: hasta 20 resultados por canción/artista, con título, canal/artista y duración cuando el proveedor la informa. También acepta un enlace individual de YouTube, YouTube Music o youtu.be; los enlaces con una lista descargan solo el video seleccionado. Las emisiones en directo se omiten.
-- Descarga de audio MP3 con [yt-dlp integrado mediante youtubedl-android 0.18.1](https://github.com/yausername/youtubedl-android) y FFmpeg; Python y QuickJS incluidos en el APK. No necesita Termux, cuenta de Google, claves API ni servidor personal. El APK aumenta de tamaño al incluir estos motores; el instalador personal incluye solo ARM64 para reducirlo.
+- Descarga el mejor audio disponible para la app con [yt-dlp integrado mediante youtubedl-android 0.18.1](https://github.com/yausername/youtubedl-android) y FFmpeg. Conserva el códec original (por ejemplo, AAC en M4A u Opus) al extraer el audio, evitando la pérdida adicional de convertirlo a MP3; no impone un bitrate reducido ni mejora la calidad de origen. Usa `bestaudio/best` y `--audio-format best`, según la [documentación de yt-dlp](https://github.com/yt-dlp/yt-dlp#post-processing-options). Python y QuickJS incluidos en el APK. No necesita Termux, cuenta de Google, claves API ni servidor personal. El APK aumenta de tamaño al incluir estos motores; el instalador personal incluye solo ARM64 para reducirlo.
 - Una descarga a la vez mediante WorkManager, con estado/progreso en la app, notificación de Android y cancelación desde ambos lugares. Continúa al cambiar de apartado o enviar la app al fondo; Android decide cuándo ejecutar trabajos pendientes y puede detenerlos. Sin conexión espera hasta recuperarla; los fallos del proveedor se muestran para que vuelvas a intentar. El límite del archivo de origen es 500 MiB. Solo los audios terminados se incorporan a la biblioteca; se reutiliza un archivo ya descargado para evitar duplicados.
 - **Actualizar motor** obtiene la versión estable de yt-dlp desde GitHub. Úsalo si YouTube cambia y deja de funcionar una búsqueda o descarga. La app muestra problemas de conexión/acceso sin exponer la salida interna del motor. El permiso de notificaciones se pide al pulsar Descargar en Android 13+; si lo rechazas puedes seguir usando el progreso y la cancelación dentro de la app.
 
@@ -89,7 +89,7 @@ Reproducir y leer la biblioteca sigue siendo local, sin anuncios. Buscar/descarg
 
 Las descargas se guardan en `filesDir/music/`, dentro del espacio privado de Tu Vida, y se leen con un FileProvider limitado a esa carpeta. No requiere permisos de almacenamiento ni acceso general a archivos. **Desinstalar la app o borrar sus datos elimina también estos audios.** No se copian a la carpeta pública de Descargas del teléfono. Quitar una canción de la biblioteca o excluir Descargas conserva el archivo; Detectar audios puede reincorporarlo al volver a incluir esa carpeta. Si Descargas está excluida, hay que incluirla antes de descargar otra canción. La copia JSON guarda referencias, no estos archivos de audio.
 
-Si restauras una copia en otro teléfono y falta un audio descargado, busca la misma canción y pulsa **Recuperar descarga**; vuelve a descargar el archivo conservando la misma referencia en tus listas. Si el archivo ya existe, se reutiliza.
+Si restauras una copia en otro teléfono y falta un audio descargado, busca la misma canción y pulsa **Recuperar descarga**; vuelve a descargar el mejor audio disponible y actualiza las referencias de favoritos, listas y cola si cambia la extensión. Si el archivo ya existe, se reutiliza. Los MP3 descargados con versiones anteriores siguen funcionando y no se vuelven a descargar automáticamente; esta mejora se aplica al obtener archivos nuevos.
 
 La copia JSON conserva la biblioteca, favoritos, listas y cola como referencias: **no incluye los audios ni transfiere permisos Android**. En otro teléfono, o si moviste/eliminaste archivos, vuelve a elegirlos o a detectar audios; las referencias antiguas pueden requerir quitarse y añadirse de nuevo a las listas. Las copias anteriores a Música siguen siendo compatibles y restauran una biblioteca vacía. El temporizador para dormir no se recupera tras matar el proceso o reiniciar el teléfono; no se inicia música automáticamente. Las restricciones de batería de HyperOS también pueden detener un servicio multimedia y necesitan probarse en el Redmi.
 
@@ -110,7 +110,7 @@ Importar valida la copia completa y muestra una confirmación antes de reemplaza
 
 ## Compilar
 
-Requisitos: **JDK 17**, Android SDK **API 35**, build-tools 35.0.0 e Internet para descargar las dependencias. Gradle Wrapper 8.9 incluido.
+Requisitos: **JDK 17**, Android SDK **API 35**, build-tools 34.0.0 e Internet para descargar las dependencias. Gradle Wrapper 8.9 incluido.
 
 ```powershell
 ./build-android.ps1 -JavaHome 'C:\ruta\jdk-17' -SdkRoot 'C:\ruta\android-sdk'
@@ -137,6 +137,8 @@ bash gradlew connectedDebugAndroidTest
 
 Las pruebas cubren saldo arrastrado, pagos reales, gastos diarios, frecuencias, cuotas, festivos, ahorro, proyección, presupuesto, deudas, categorías, copias, recurrencias iCal, excepciones, horarios de silencio, repetición de tareas, transición de pomodoro y biblioteca/listas de música. Las pruebas en Android reproducen archivos WAV reales de ejemplo, comprueban lectura local, favoritos/listas, segundo plano, guardado de cola/modos/posición y temporizador, y capturan el control multimedia de sistema. Los reportes se generan en `android/app/build/reports/`.
 
+La actualización 1.3.1 pasó **85 pruebas JVM y las 4 pruebas de Descubrir en Android 15**, incluida una descarga real de YouTube en segundo plano. Una prueba local ofrece dos calidades de AAC y Opus, comprueba que el motor elige la superior y compara hashes SHA-256 de los paquetes de audio antes/después de la extracción: son idénticos. También verifica lectura, reproducción y recuperación de favoritos/listas/cola desde una referencia MP3 anterior. Compilación y lint sin errores (13 avisos no bloqueantes); capturas inspeccionadas en claro, oscuro y letra 1.3. APK personal 1.3.1 ARM64 disponible en `artifacts/Tu-Vida-Android.apk`.
+
 La actualización 1.3.0 pasó **82 pruebas JVM y 15 pruebas en Android 15**, con la prueba externa de YouTube activada, además de compilación y lint sin errores (13 avisos no bloqueantes en el informe final, incluido el de ABI para ChromeOS). Se verifica el motor nativo, conversión local a MP3, lectura privada, incorporación sin duplicados y una búsqueda/descarga real de un audio de prueba con la app enviada al fondo. Se conservan las comprobaciones de finanzas, agenda, avisos, biblioteca, carpetas, copias y portadas. Las capturas de Descubrir se inspeccionan en claro, oscuro y letra 1.3. Los detalles y límites se registran en [docs/VERIFICATION.md](docs/VERIFICATION.md). La cuenta Google, los audífonos físicos y HyperOS necesitan comprobarse en tu Redmi.
 
 La prueba externa se activa explícitamente y depende del proveedor; las verificaciones habituales la omiten para no exigir YouTube en cada compilación:
@@ -149,6 +151,8 @@ cd android
 ## Estructura y cambios
 
 Consulta [AGENTS.md](AGENTS.md) para el mapa detallado y las reglas de trabajo; también se incluye `agents.ms`, como solicitaste. Las referencias originales se conservan en `Proyectos de apoyo/`. El desarrollo principal está en `android/app/src/main/java/co/tuvida/app/`, separado en `data`, `domain`, `platform` y `ui`.
+
+**1.3.1:** conserva la calidad original del mejor audio disponible al descargar, sin conversión obligatoria a MP3. Biblioteca y buscador reconocen M4A, Opus y los demás formatos de audio admitidos. Recuperar una descarga actualiza sus referencias sin perder favoritos, listas, cola ni posición; conserva compatibilidad con los MP3 anteriores.
 
 **1.3.0:** buscador de YouTube, enlaces individuales, descarga de audio MP3 dentro de la app, progreso/cancelación, actualización manual del motor y entrada automática a la biblioteca. Mantiene el formato de datos y las copias anteriores. El instalador personal se compila para ARM64; Gradle conserva la variante universal para otros dispositivos y verificaciones. Consulta las atribuciones de las dependencias nativas en [THIRD_PARTY.md](THIRD_PARTY.md).
 

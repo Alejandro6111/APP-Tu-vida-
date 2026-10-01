@@ -9,7 +9,6 @@ import androidx.core.app.NotificationCompat
 import androidx.work.*
 import co.tuvida.app.R
 import co.tuvida.app.TuVidaApplication
-import co.tuvida.app.domain.Music
 import co.tuvida.app.domain.OnlineMusic
 import com.yausername.youtubedl_android.YoutubeDL
 import java.io.File
@@ -30,19 +29,12 @@ class MusicDownloadWorker(context: Context, params: WorkerParameters) : Worker(c
             require(app.store.current.music.songs.size < 10000) { "Tu biblioteca ya tiene 10.000 canciones. Quita alguna antes de descargar." }
             if (isStopped) return Result.failure()
             setForegroundAsync(notification(title)).get()
-            val destination = OnlineMusicEngine.file(app, video)
-            if (!destination.exists()) {
+            var destination = OnlineMusicEngine.existingFile(app, video)
+            if (destination == null) {
                 OnlineMusicEngine.init(app)
                 if (isStopped) return Result.failure()
                 staging.mkdirs()
-                val request = OnlineMusicEngine.request("https://www.youtube.com/watch?v=$video").apply {
-                    addOption("-f", "bestaudio/best"); addOption("--extract-audio")
-                    addOption("--audio-format", "mp3"); addOption("--audio-quality", "0")
-                    addOption("--embed-metadata"); addOption("--no-mtime")
-                    addOption("--max-filesize", "500M")
-                    addOption("--match-filter", "!is_live")
-                    addOption("--newline"); addOption("-o", File(staging, "audio.%(ext)s").absolutePath)
-                }
+                val request = OnlineMusicEngine.downloadRequest(listOf("https://www.youtube.com/watch?v=$video"), staging)
                 var lastProgress = -1
                 YoutubeDL.execute(request, id.toString()) { percent, _, _ ->
                     if (isStopped) YoutubeDL.destroyProcessById(id.toString())
@@ -53,20 +45,23 @@ class MusicDownloadWorker(context: Context, params: WorkerParameters) : Worker(c
                     }
                 }
                 if (isStopped) return Result.failure()
-                val audio = File(staging, "audio.mp3")
-                check(audio.exists() && audio.length() > 0) { "El proveedor no entregó un archivo de audio." }
-                // Validate the converted file before making it part of the library.
+                val audio = staging.listFiles().orEmpty().singleOrNull {
+                    it.isFile && it.nameWithoutExtension == "audio" && it.extension in OnlineMusic.audioExtensions && it.length() > 0
+                }
+                check(audio != null) { "El proveedor no entregó un archivo de audio." }
+                // Validate the extracted file before making it part of the library.
                 android.media.MediaMetadataRetriever().let { reader ->
                     try { reader.setDataSource(audio.absolutePath); check(reader.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()?.let { it > 0 } == true) }
                     finally { reader.release() }
                 }
+                destination = OnlineMusicEngine.file(app, video, audio.extension)
                 check(audio.renameTo(destination)) { "No se pudo guardar la descarga." }
             }
             if (isStopped) return Result.failure()
             val song = AudioFiles.read(app, OnlineMusicEngine.uri(app, destination)).copy(title = title, artist = artist)
             app.store.update {
                 require(OnlineMusicEngine.FOLDER !in it.music.excludedFolders) { "Descargas está excluida. Vuelve a incluir la carpeta." }
-                it.copy(music = Music.merge(it.music, listOf(song)))
+                it.copy(music = OnlineMusic.mergeDownload(it.music, video, song))
             }
             return Result.success(workDataOf("uri" to song.uri, "title" to title))
         } catch (e: Exception) {

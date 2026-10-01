@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import co.tuvida.app.data.MusicLibrary
 import co.tuvida.app.domain.Music
 import co.tuvida.app.domain.MusicResult
+import co.tuvida.app.domain.OnlineMusic
 
 @Composable fun MusicDiscoveryScreen(data: MusicLibrary, vm: MusicViewModel, query: String, change: (String) -> Unit, downloadSong: (MusicResult) -> Unit) {
     val state by vm.discovery.collectAsState()
@@ -51,14 +52,14 @@ import co.tuvida.app.domain.MusicResult
             Info(if (state.searched) "No hay resultados" else "Tu música empieza aquí",
                 if (state.searched) "Prueba otro título o artista, o pega el enlace de una canción." else "Escribe el nombre de una canción o de un artista. Las descargas aparecen en Biblioteca y en la carpeta Descargas.")
         }
-        if (state.results.isNotEmpty()) item { Section("Resultados de YouTube", "${state.results.size} canciones · Audio MP3") }
+        if (state.results.isNotEmpty()) item { Section("Resultados de YouTube", "${state.results.size} canciones · Máxima calidad disponible") }
         items(state.results, key = { it.id }) { result ->
             Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(result.title, style = MaterialTheme.typography.titleMedium)
                     Text("${result.artist.ifBlank { "Artista desconocido" }} · ${if (result.duration > 0) Music.time(result.duration) else "Duración no disponible"}",
                         style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    val local = data.songs.find { it.uri.substringAfterLast('/') == "${result.id}.mp3" }
+                    val local = data.songs.find { OnlineMusic.downloadId(it.uri) == result.id }
                     if (local != null) FilledTonalButton({ vm.play(listOf(local)) }) { Text("Escuchar descargada") }
                     FilledTonalButton({ downloadSong(result) }, enabled = download.ready && !download.busy && !state.updating,
                         modifier = Modifier.testTag("download-${result.id}")) {
@@ -84,7 +85,7 @@ import co.tuvida.app.domain.MusicResult
                 download.busy -> {
                     if (download.waiting || download.percent == 0 || download.percent == 100) LinearProgressIndicator(Modifier.fillMaxWidth())
                     else LinearProgressIndicator(progress = { download.percent / 100f }, modifier = Modifier.fillMaxWidth())
-                    Text(when { download.waiting -> "Esperando conexión o turno de Android…"; download.percent == 100 -> "Preparando MP3…"; download.percent == 0 -> "Preparando descarga…"; else -> "${download.percent}%" })
+                    Text(when { download.waiting -> "Esperando conexión o turno de Android…"; download.percent == 100 -> "Preparando audio…"; download.percent == 0 -> "Preparando descarga…"; else -> "${download.percent}%" })
                     TextButton(vm::cancelDownload) { Text("Cancelar descarga") }
                 }
                 download.error.isNotBlank() -> Text(download.error)

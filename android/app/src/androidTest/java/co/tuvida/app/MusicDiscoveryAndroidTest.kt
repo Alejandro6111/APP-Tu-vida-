@@ -13,6 +13,7 @@ import co.tuvida.app.platform.*
 import co.tuvida.app.ui.*
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
+import com.google.gson.Gson
 import org.junit.*
 import org.junit.Assert.*
 import org.junit.runner.RunWith
@@ -37,7 +38,7 @@ class MusicDiscoveryAndroidTest {
     @After fun cleanup() {
         WorkManager.getInstance(app).cancelUniqueWork(MusicDownloadWorker.NAME).result.get(10, TimeUnit.SECONDS)
         InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("settings put system font_scale 1.0").close()
-        OnlineMusicEngine.file(app, testId).delete()
+        co.tuvida.app.domain.OnlineMusic.audioExtensions.forEach { OnlineMusicEngine.file(app, testId, it).delete() }
     }
     private fun capture(name: String) {
         ui.waitForIdle()
@@ -45,6 +46,73 @@ class MusicDiscoveryAndroidTest {
         InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("screencap -p /data/local/tmp/tuvida-$name.png").let {
             ParcelFileDescriptor.AutoCloseInputStream(it).use { input -> input.readBytes() }
         }
+    }
+    private fun ffmpeg(vararg arguments: String): String {
+        val process = ProcessBuilder(listOf(File(app.applicationInfo.nativeLibraryDir, "libffmpeg.so").absolutePath) + arguments)
+            .redirectErrorStream(true)
+        process.environment()["LD_LIBRARY_PATH"] = File(app.noBackupFilesDir, "youtubedl-android/packages/ffmpeg/usr/lib").absolutePath + ":" +
+            File(app.noBackupFilesDir, "youtubedl-android/packages/python/usr/lib").absolutePath
+        val running = process.start(); val output = running.inputStream.bufferedReader().use { it.readText() }
+        assertTrue(running.waitFor(20, TimeUnit.SECONDS)); assertEquals(output, 0, running.exitValue())
+        return output
+    }
+    private fun audioHash(file: File): String = ffmpeg("-v", "error", "-i", file.absolutePath,
+        "-map", "0:a:0", "-c:a", "copy", "-f", "hash", "-hash", "sha256", "-").trim()
+
+    @Test fun bestAudioPreservesAacAndOpusPacketsAndRecoversLegacyReferences() {
+        OnlineMusicEngine.init(app)
+        val fixture = File(app.cacheDir, "quality-fixture").apply { mkdirs() }
+        try {
+            listOf(Triple("aac", "m4a", "m4a"), Triple("libopus", "webm", "opus")).forEach { (encoder, sourceExtension, outputExtension) ->
+                val sources = listOf(48, 160).map { bitrate ->
+                    File(fixture, "$bitrate.$sourceExtension").also { source ->
+                        ffmpeg("-y", "-f", "lavfi", "-i", "sine=frequency=220:duration=3", "-codec:a", encoder,
+                            "-b:a", "${bitrate}k", source.absolutePath)
+                    }
+                }
+                val info = File(fixture, "info.json")
+                info.writeText(Gson().toJson(mapOf("id" to testId, "title" to "Prueba de calidad", "extractor" to "generic",
+                    "extractor_key" to "Generic", "webpage_url" to "https://example.test/audio", "is_live" to false,
+                    "formats" to sources.mapIndexed { index, source -> mapOf(
+                        "format_id" to (index + 1).toString(), "url" to android.net.Uri.fromFile(source).toString(),
+                        "ext" to sourceExtension, "vcodec" to "none", "acodec" to if (encoder == "aac") "aac" else "opus",
+                        "abr" to if (index == 0) 48 else 160, "filesize" to source.length()) })))
+                val staging = File(fixture, "output").apply { mkdirs() }
+                val request = OnlineMusicEngine.downloadRequest(emptyList(), staging).apply {
+                    // File URLs are enabled only for this offline fixture, never in production.
+                    addOption("--enable-file-urls"); addOption("--load-info-json", info.absolutePath)
+                }
+                val result = YoutubeDL.execute(request, "test-quality-$encoder", null)
+                assertEquals(result.out, 0, result.exitCode)
+                val audio = File(staging, "audio.$outputExtension")
+                assertTrue(result.out, audio.exists())
+                assertNotEquals(audioHash(sources.first()), audioHash(sources.last()))
+                assertEquals("The original compressed audio packets must survive extraction", audioHash(sources.last()), audioHash(audio))
+                val destination = OnlineMusicEngine.file(app, testId, outputExtension)
+                assertTrue(audio.renameTo(destination))
+                val song = AudioFiles.read(app, OnlineMusicEngine.uri(app, destination))
+                assertTrue(song.duration > 0)
+                assertTrue(OnlineMusicEngine.localSongs(app).any { it.uri == song.uri })
+                val legacy = song.copy(uri = OnlineMusicEngine.uri(app, OnlineMusicEngine.file(app, testId)).toString())
+                ui.runOnIdle { app.store.restore(AppData(music = MusicLibrary(songs = listOf(legacy), favorites = setOf(legacy.uri),
+                    playlists = listOf(MusicPlaylist(name = "Prueba", songs = listOf(legacy.uri))),
+                    queue = listOf(legacy.uri), current = legacy.uri, position = 500),
+                    preferences = Preferences(theme = "dark", football = emptySet(), notifications = false))) }
+                ui.runOnIdle { vm.downloadSong(MusicResult(testId, "Prueba de calidad", "Tu Vida", song.duration)) }
+                ui.waitUntil(20000) { !vm.download.value.busy && app.store.current.music.songs.any { it.uri == song.uri } }
+                assertTrue(vm.download.value.error, vm.download.value.error.isBlank())
+                val recovered = app.store.current.music
+                assertEquals(setOf(song.uri), recovered.favorites)
+                assertEquals(listOf(song.uri), recovered.playlists.single().songs)
+                assertEquals(listOf(song.uri), recovered.queue); assertEquals(song.uri, recovered.current)
+                ui.waitUntil(10000) { vm.playback.value.connected }
+                ui.runOnIdle { vm.play(recovered.songs) }
+                ui.waitUntil(10000) { vm.playback.value.playing && vm.playback.value.position > 0 }
+                assertTrue(vm.playback.value.error, vm.playback.value.error.isBlank())
+                ui.runOnIdle { vm.toggle() }
+                destination.delete()
+            }
+        } finally { fixture.deleteRecursively() }
     }
     @Test fun bundledEngineAndPrivateAudioDownload() {
         OnlineMusicEngine.init(app)
@@ -120,6 +188,6 @@ class MusicDiscoveryAndroidTest {
         assertTrue(vm.download.value.uri.isNotBlank())
         val song = app.store.current.music.songs.single { it.uri == vm.download.value.uri }
         assertTrue(AudioFiles.read(app, android.net.Uri.parse(song.uri)).duration > 0)
-        OnlineMusicEngine.file(app, demo.id).delete()
+        OnlineMusicEngine.existingFile(app, demo.id)?.delete()
     }
 }

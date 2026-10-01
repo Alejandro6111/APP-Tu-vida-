@@ -1,6 +1,8 @@
 package co.tuvida.app.domain
 
 import com.google.gson.JsonParser
+import co.tuvida.app.data.MusicLibrary
+import co.tuvida.app.data.Song
 import java.net.URI
 
 data class MusicResult(val id: String, val title: String, val artist: String, val duration: Long) {
@@ -9,8 +11,29 @@ data class MusicResult(val id: String, val title: String, val artist: String, va
 
 /** Only canonical video IDs reach download requests or filenames; queries remain single arguments. */
 object OnlineMusic {
+    val audioExtensions = setOf("opus", "m4a", "ogg", "flac", "wav", "aac", "mp3")
     private val videoId = Regex("[A-Za-z0-9_-]{11}")
     fun validId(id: String) = videoId.matches(id)
+    fun downloadId(value: String): String? {
+        val uri = runCatching { URI(value) }.getOrNull() ?: return null
+        if (uri.scheme != "content" || uri.authority != "co.tuvida.app.musicfiles" || uri.query != null || uri.fragment != null) return null
+        val name = uri.path?.removePrefix("/downloads/") ?: return null
+        val id = name.substringBeforeLast('.', "")
+        return id.takeIf { validId(it) && name.substringAfterLast('.') in audioExtensions && uri.path == "/downloads/$name" }
+    }
+    /** A recovered download may have a new extension; keep all library references together. */
+    fun mergeDownload(library: MusicLibrary, video: String, song: Song): MusicLibrary {
+        require(validId(video) && downloadId(song.uri) == video)
+        val previous = library.songs.filter { downloadId(it.uri) == video }.map { it.uri }.toSet()
+        fun reference(uri: String) = if (uri in previous) song.uri else uri
+        return Music.merge(library.copy(
+            songs = library.songs.map { if (it.uri in previous) song else it }.distinctBy { it.uri },
+            favorites = library.favorites.map(::reference).toSet(),
+            playlists = library.playlists.map { it.copy(songs = it.songs.map(::reference).distinct()) },
+            queue = library.queue.map(::reference).distinct(),
+            current = reference(library.current)
+        ), listOf(song))
+    }
     fun input(value: String): String {
         val text = value.trim()
         require(text.isNotBlank() && text.length <= 200 && text.none { it.isISOControl() }) { "Escribe una canción, artista o enlace de YouTube (hasta 200 caracteres)." }

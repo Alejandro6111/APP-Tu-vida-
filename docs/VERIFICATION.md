@@ -115,3 +115,27 @@ Límites: sin instalación o comprobación de batería en Redmi/HyperOS, sin pru
 **APK personal 1.3.0, código 4, ARM64:** `artifacts/Tu-Vida-Android.apk`, **77.039.010 bytes** (aproximadamente 77 MB). Compilado con `build-android.ps1` después de las comprobaciones del mismo código; se omite repetirlas para el cambio de empaquetado de ABI. El APK universal anterior a esa selección ocupa unos 223 MB.
 
 **SHA-256:** `171BFE3CAD1080F48B87A3147342A304646B1CFC6E013759C6647FFF911577FF`.
+
+## Actualización 1.3.1 · máxima calidad de descarga · 2026-10-01
+
+Se conserva la selección `bestaudio/best` y se sustituye la conversión obligatoria a MP3 por `--audio-format best`. Para AAC y Opus, el motor mantiene el códec de origen y copia el audio al extraerlo; biblioteca, recuperación y búsqueda admiten las nuevas extensiones y los MP3 anteriores. La recuperación actualiza las referencias si cambia el formato sin perder favoritos, listas, cola ni posición. Los archivos existentes se reutilizan y no se actualizan automáticamente.
+
+| Verificación | Resultado |
+|---|---|
+| `assembleDebug testDebugUnitTest lintDebug` | Aprobadas en variante universal y empaquetado personal ARM64 |
+| Pruebas JVM | 85 aprobadas, incluidas 3 nuevas de identificación y recuperación |
+| Pruebas de Descubrir en Android 15 | 4 aprobadas, con YouTube real activado |
+| AAC y Opus de dos calidades | Selección de la calidad superior, hashes de paquetes idénticos antes/después |
+| Lectura, recuperación y reproducción M4A/Opus | Aprobadas con FFmpeg, FileProvider, WorkManager y Media3 reales |
+| Lint | 0 errores, 13 avisos no bloqueantes |
+| Interfaz | Capturas inspeccionadas en oscuro, claro y fuente 1.3 |
+
+La nueva prueba Android genera fuentes de 48 y 160 kb/s para cada códec. Un manifiesto de formatos local, cargado en el mismo constructor de solicitud que usa el trabajador, evita depender de la red y ofrece ambos archivos al selector. `--enable-file-urls` se activa exclusivamente en esta prueba. La extracción de M4A y de WebM/Opus a Opus conserva exactamente los paquetes comprimidos del archivo superior: FFmpeg con `-c:a copy -f hash -hash sha256` produce el mismo hash para origen y resultado. Los dos archivos de origen tienen hashes distintos. Ambos resultados tienen duración positiva, aparecen en la detección privada, recuperan las referencias de un MP3 ausente y reproducen con posición avanzando y sin error de Media3.
+
+La prueba externa volvió a descargar el audio de prueba `EJ3gJEDjYgs` con la app enviada al fondo; terminó correctamente y el archivo resultante se leyó con duración positiva. Las otras pruebas conservan compatibilidad con MP3 y verifican estados de Descubrir. El caso visual se repitió una vez para obtener capturas limpias después de un diálogo de falta de respuesta de System UI durante el arranque del emulador: aprobado. Las capturas finales están en `.impeccable/review/quality-discovery-*.png`, con la captura oscura actualizada en `docs/images/musica-descubrir.png`. La escala del emulador queda en 1.0.
+
+Esta ejecución se limita a las cuatro pruebas Android de Descubrir afectadas; no se repitió la suite nativa completa de finanzas, avisos y otras pantallas. No se comprobó un Redmi físico ni HyperOS. La calidad disponible depende del contenido y del acceso permitido por YouTube; conservar el códec evita una pérdida adicional, pero no mejora el origen.
+
+**APK personal 1.3.1, código 5, ARM64:** `artifacts/Tu-Vida-Android.apk`, **77.042.398 bytes**.
+
+**SHA-256:** `B5B715DB76A04FA5EB9B3372EF532C6F3BA0E85FD15C26D184B679D4D8120C60`.

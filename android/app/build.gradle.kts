@@ -6,8 +6,8 @@ android {
         applicationId = "co.tuvida.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.3.0"
+        versionCode = 5
+        versionName = "1.3.1"
         ndk {
             val supported = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
             val selected = providers.gradleProperty("tuVidaAbi").orNull
