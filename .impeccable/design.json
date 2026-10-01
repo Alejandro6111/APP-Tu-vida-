@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-30T02:45:03Z",
+  "generatedAt": "2026-10-01T02:23:57Z",
   "title": "Diseño de Tu Vida",
   "extensions": {
     "platform": "android",
@@ -12,7 +12,10 @@
       "navigation": "android/app/src/main/java/co/tuvida/app/ui/App.kt",
       "components": "android/app/src/main/java/co/tuvida/app/ui/Components.kt",
       "editors": "android/app/src/main/java/co/tuvida/app/ui/Editors.kt",
-      "health": "android/app/src/main/java/co/tuvida/app/ui/LifeScreens.kt"
+      "health": "android/app/src/main/java/co/tuvida/app/ui/LifeScreens.kt",
+      "music": "android/app/src/main/java/co/tuvida/app/ui/MusicScreen.kt",
+      "musicState": "android/app/src/main/java/co/tuvida/app/ui/MusicViewModel.kt",
+      "musicNotification": "android/app/src/main/java/co/tuvida/app/platform/MusicService.kt"
     },
     "breakpoints": [
       {
@@ -30,7 +33,7 @@
       {
         "name": "Contexto y acción",
         "symbols": ["TopAppBar", "IconButton", "FloatingActionButton"],
-        "description": "Ajustes desde la barra superior. Una acción flotante contextual en Agenda, Dinero y Salud."
+        "description": "Ajustes y Música desde la barra superior; Música también desde Hoy. Una acción flotante contextual en Agenda, Dinero y Salud."
       },
       {
         "name": "Información agrupada",
@@ -51,6 +54,21 @@
         "name": "Calendario de salud",
         "symbols": ["HealthScreen", "Surface", "MonthPicker"],
         "description": "Verde, rojo o neutro según registro explícito; cada día expone fecha, estado y selección en contentDescription."
+      },
+      {
+        "name": "Biblioteca musical",
+        "symbols": ["MusicScreen", "ScrollableTabRow", "Tab", "LazyColumn", "FlowRow", "ListItem", "DropdownMenu", "AlertDialog"],
+        "description": "Cuatro tabs: Biblioteca, Favoritos, Listas y Cola. Margen lateral de 16 dp y separación vertical de 12 dp; acciones tonales y de contorno se acomodan en FlowRow. Filas con título, artista/álbum y duración; búsqueda y ordenación en Biblioteca/Favoritos, orden conservado en listas y cola. Carga, conexión, vacíos y errores explicados con texto. Confirmación al quitar canciones o eliminar listas conserva el archivo del teléfono."
+      },
+      {
+        "name": "Reproductor musical",
+        "symbols": ["MusicPlayer", "Surface", "Slider", "FilledIconButton", "IconToggleButton", "FilterChip", "AssistChip", "FlowRow"],
+        "description": "Panel primaryContainer con shapes.large y relleno de 16 dp. Reproducir/pausar de 64 dp, anterior/siguiente, favorito seleccionado, progreso etiquetado y tiempos visibles. Aleatorio, repetición y temporizador se acomodan en FlowRow. Iconos Material con descripciones de acción; título hasta tres líneas. La fila actual añade fondo primaryContainer e icono con descripción Canción actual."
+      },
+      {
+        "name": "Minirreproductor musical",
+        "symbols": ["MusicMiniPlayer", "Surface", "IconButton"],
+        "description": "Visible cuando existe una canción actual y la ruta no es Música. Superficie secondaryContainer con título/artista a una línea y elipsis; área de apertura de al menos 56 dp de alto, pausa/reanudación y siguiente canción etiquetadas. Encima de NavigationBar en teléfono; mantiene acceso al audio desde otros destinos."
       }
     ],
     "typographyImplementation": {
@@ -65,7 +83,27 @@
       "captureCount": 12,
       "captureType": "native-emulator",
       "verdict": "SHIP",
-      "scope": "Capturas nativas de teléfono, incluidas variantes oscuras y texto aumentado. No demuestra pruebas en hardware Redmi ni una captura de tablet."
+      "scope": "Capturas nativas de teléfono, incluidas variantes oscuras y texto aumentado. No demuestra pruebas en hardware Redmi ni una captura de tablet.",
+      "music": {
+        "verdict": "SHIP",
+        "captures": [
+          "music-light.png",
+          "music-dark.png",
+          "music-font-large.png",
+          "music-playlist.png",
+          "music-queue.png",
+          "music-mini.png",
+          "music-notification.png"
+        ],
+        "captureType": "native-emulator",
+        "scope": "Tema claro, oscuro, texto aumentado, listas, cola, minirreproductor y notificación. No acredita hardware Redmi, tablet ni una auditoría completa con TalkBack."
+      }
+    },
+    "musicAccessibility": {
+      "controls": "Controles Material 3; IconToggleButton comunica el estado de favorito actual, filas etiquetan marcar/quitar favorito y reproducir el título, Slider expone Posición de la canción con tiempos visibles. Estado actual mediante icono y descripción además del color.",
+      "textAndLayout": "Roles Semibold Material en sp. Tabs desplazables, contenido vertical y FlowRow para acciones/chips. Títulos: dos líneas en filas, tres en panel y una en minirreproductor, con elipsis.",
+      "permissionsAndFeedback": "Permiso de audios tras Detectar audios; Añadir canciones usa el selector Android sin permiso general. Snackbar e Info describen fallos y alternativas.",
+      "backgroundPlayback": "MediaSessionService de Media3 y notificación multimedia nativa de Android; sin diseño de notificación propio."
     }
   },
   "narrative": {

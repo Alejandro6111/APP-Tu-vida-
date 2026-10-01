@@ -43,6 +43,7 @@ object Backup {
         require(data.financeSettings.emergencyMonths in 1..12 && data.financeSettings.savingsRate in 0..80 && data.financeSettings.spendingDays.all { it in 1..7 } && data.financeSettings.spendingDays.isNotEmpty())
         require(data.financeSettings.weekStart in 1..7 && data.financeSettings.weekEnd in 1..7)
         require(data.focus.remaining >= 0 && data.focus.elapsed >= 0 && data.focus.completed >= 0)
+        co.tuvida.app.domain.Music.validate(data.music)
     }
     private fun legacy(text: String): AppData {
         val root = JsonParser.parseString(text).asJsonObject

@@ -38,5 +38,14 @@ data class AppData(
     val savings: Savings = Savings(), val financeSettings: FinanceSettings = FinanceSettings(),
     val tasks: List<Task> = emptyList(), val health: List<HealthDay> = emptyList(), val events: List<AgendaEvent> = emptyList(),
     val sync: List<SyncStatus> = emptyList(), val preferences: Preferences = Preferences(), val focus: FocusState = FocusState(),
-    val studyLog: List<StudyLog> = emptyList(), val lastBackup: Long = 0, val snoozed: List<SnoozedReminder> = emptyList()
+    val studyLog: List<StudyLog> = emptyList(), val lastBackup: Long = 0, val snoozed: List<SnoozedReminder> = emptyList(),
+    val music: MusicLibrary = MusicLibrary()
+)
+
+data class Song(val uri: String = "", val title: String = "", val artist: String = "", val album: String = "", val duration: Long = 0)
+data class MusicPlaylist(val id: String = newId(), val name: String = "", val songs: List<String> = emptyList())
+data class MusicLibrary(
+    val songs: List<Song> = emptyList(), val favorites: Set<String> = emptySet(),
+    val playlists: List<MusicPlaylist> = emptyList(), val queue: List<String> = emptyList(),
+    val current: String = "", val position: Long = 0, val repeat: Int = 0, val shuffle: Boolean = false
 )

@@ -29,6 +29,8 @@ private val destinations = listOf("home" to "Hoy", "finance" to "Dinero", "agend
 private val navIcons = listOf(Icons.Outlined.Home, Icons.Outlined.AccountBalanceWallet, Icons.Outlined.CalendarMonth, Icons.Outlined.Timer, Icons.Outlined.FavoriteBorder)
 
 @Composable fun App(vm: AppViewModel, route: String, navigate: (String) -> Unit) {
+    val music: MusicViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    val musicMessage by music.message.collectAsState()
     val data by vm.state.collectAsState(); val context = LocalContext.current
     val message by vm.message.collectAsState(); val preview by vm.importPreview.collectAsState()
     var editor by remember { mutableStateOf<Editor?>(null) }
@@ -39,13 +41,17 @@ private val navIcons = listOf(Icons.Outlined.Home, Icons.Outlined.AccountBalance
     val calendarPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> if (granted) { vm.refreshSources(); vm.sync() } else vm.message.value = "Puedes activar Calendario después en los permisos de Android." }
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> vm.message.value = if (granted) "Notificaciones autorizadas." else "Los recordatorios requieren el permiso de notificaciones de Android." }
     LaunchedEffect(message) { if (message.isNotEmpty()) { snackbar.showSnackbar(message); if (vm.message.value == message) vm.message.value = "" } }
+    LaunchedEffect(musicMessage) { if (musicMessage.isNotEmpty()) { snackbar.showSnackbar(musicMessage); if (music.message.value == musicMessage) music.message.value = "" } }
     BackHandler(enabled = route != "home" && editor == null) { navigate("home") }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val expanded = maxWidth >= 600.dp
         Row(Modifier.fillMaxSize()) {
             if (expanded) NavigationRail { Spacer(Modifier.height(24.dp)); destinations.forEachIndexed { index, (key, title) -> NavigationRailItem(selected = route == key, onClick = { navigate(key) }, icon = { Icon(navIcons[index], title) }, label = { Text(title) }) } }
-            Scaffold(modifier = Modifier.weight(1f), topBar = { TopAppBar(title = { Text(if (route == "settings") "Ajustes" else destinations.find { it.first == route }?.second?.let { if (it == "Hoy") "Tu Vida" else it } ?: "Tu Vida") }, navigationIcon = { if (route == "settings") IconButton({ navigate("home") }) { Icon(Icons.Outlined.ArrowBack, "Volver") } }, actions = { if (route != "settings") IconButton({ navigate("settings") }) { Icon(Icons.Outlined.Settings, "Ajustes") } }) }, bottomBar = {
+            Scaffold(modifier = Modifier.weight(1f), topBar = { TopAppBar(title = { Text(if (route == "settings") "Ajustes" else if (route == "music") "Música" else destinations.find { it.first == route }?.second?.let { if (it == "Hoy") "Tu Vida" else it } ?: "Tu Vida") }, navigationIcon = { if (route == "settings" || route == "music") IconButton({ navigate("home") }) { Icon(Icons.Outlined.ArrowBack, "Volver") } }, actions = { if (route != "music") IconButton({ navigate("music") }) { Icon(Icons.Outlined.MusicNote, "Música") }; if (route != "settings") IconButton({ navigate("settings") }) { Icon(Icons.Outlined.Settings, "Ajustes") } }) }, bottomBar = {
+                Column {
+                if (route != "music") MusicMiniPlayer(data.music, music) { navigate("music") }
                 if (!expanded) NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceVariant) { destinations.forEachIndexed { index, (key, title) -> NavigationBarItem(selected = route == key, onClick = { navigate(key) }, icon = { Icon(navIcons[index], null) }, label = { Text(title) }) } }
+                }
             }, snackbarHost = { SnackbarHost(snackbar) }, floatingActionButton = {
                 when (route) {
                     "agenda" -> FloatingActionButton({ editor = Editor("task") }) { Icon(Icons.Outlined.Add, "Añadir tarea o sesión") }
@@ -55,6 +61,7 @@ private val navIcons = listOf(Icons.Outlined.Home, Icons.Outlined.AccountBalance
             }) { padding ->
                 Box(Modifier.padding(padding).fillMaxSize()) {
                     when (route) {
+                        "music" -> MusicScreen(data.music, music)
                         "finance" -> FinanceScreen(data, vm) { editor = it }
                         "agenda" -> AgendaScreen(data, vm, { editor = it }, { navigate("settings") }, { event ->
                             vm.change { d -> d.copy(tasks = d.tasks + Task(title = "Estudiar: ${event.title}", due = event.start, kind = "study", durationMinutes = d.preferences.studyDuration)) }; vm.message.value = "Sesión de estudio creada en tu agenda."

@@ -1,6 +1,6 @@
 # Tu Vida · Android
 
-Tu app personal para reunir dinero, agenda, estudio y salud. **Android nativo con Kotlin y Jetpack Compose**, diseñado para Redmi 13 y compatible con Android 8 o posterior. Interfaz en español, paleta verde petróleo, marfil y dorado, temas claro/oscuro y tipografía Semibold.
+Tu app personal para reunir dinero, agenda, estudio, salud y música. **Android nativo con Kotlin y Jetpack Compose**, diseñado para Redmi 13 y compatible con Android 8 o posterior. Interfaz en español, paleta verde petróleo, marfil y dorado, temas claro/oscuro y tipografía Semibold.
 
 <p><img src="docs/images/hoy.png" width="240" alt="Pantalla Hoy con datos de ejemplo" /> <img src="docs/images/salud.png" width="240" alt="Calendario de salud con ejercicio y descanso registrados" /> <img src="docs/images/dinero-oscuro.png" width="240" alt="Finanzas en tema oscuro con datos de ejemplo" /></p>
 
@@ -16,6 +16,9 @@ Al abrir:
 2. En **Ajustes → Google Calendar**, autoriza el permiso y selecciona los calendarios que sincroniza tu cuenta Google en el teléfono. Si no aparecen, activa la sincronización de Calendario en Android y pulsa Actualizar. También puedes conectar la dirección secreta iCal de Google, de solo lectura.
 3. Permite notificaciones y alarmas precisas desde Ajustes. En HyperOS/MIUI, revisa **Inicio automático**, **Notificaciones** y **Batería → Sin restricciones** para Tu Vida. El teléfono conserva el control final sobre la entrega de los avisos.
 4. Mantén pulsada la pantalla principal → **Widgets → Tu Vida** para añadir Agenda, Finanzas, Salud y Enfoque.
+5. Abre **Música** desde el icono de nota musical superior o **Hoy → Escuchar mi música**. Pulsa **Detectar audios** para autorizar y leer los audios del teléfono, o **Añadir canciones** para elegir varios archivos con el selector Android. El permiso de audios se solicita únicamente al pulsar Detectar; elegir archivos no necesita acceso general al almacenamiento.
+
+Para actualizar desde 1.0.0, instala el nuevo APK sobre la app existente, sin desinstalarla: conserva los datos locales cuando Android acepta la misma firma.
 
 También se compila un APK en cada ejecución de [GitHub Actions](https://github.com/Alejandro6111/APP-Tu-vida-/actions), disponible en los artefactos del trabajo Android. La compilación pública usa la fuente alternativa de Android, salvo que se incorpore una fuente con licencia adecuada.
 
@@ -62,6 +65,20 @@ Los feeds públicos pueden cambiar horarios o no tener encuentros futuros. Tu Vi
 - Calendario propio: **verde** al registrar ejercicio, **rojo** al registrar un día sin ejercicio, **neutro** cuando todavía no se ha registrado. Cada estado también tiene texto accesible.
 - Edición de días anteriores, días de ejercicio y minutos del mes. No permite registrar actividad en días futuros.
 
+### Música local, sin anuncios
+
+- Biblioteca de audios del teléfono y selección de varios archivos con acceso persistente de Android. Se leen título, artista, álbum y duración; búsqueda que ignora acentos y orden por título, artista, duración o adición reciente.
+- Favoritos y listas persistentes: crear, renombrar, eliminar, añadir/quitar canciones y cambiar su orden. Eliminar una lista o quitar una canción de la biblioteca **no borra archivos del teléfono**.
+- Reproducir una canción o todo el conjunto visible, pausa/continuación, anterior/siguiente y deslizador para avanzar dentro del audio.
+- Repetición desactivada, de una canción o de toda la cola; modo aleatorio independiente. Cola con reproducción directa, añadir al final o después de la actual, quitar y mover canciones. Si una referencia de audio ya está en la cola, la app te avisa.
+- Reproducción en segundo plano mediante Media3 y servicio Android `mediaPlayback`, con controles de sistema, notificación multimedia y sesión para pantalla bloqueada/controles de audífonos. Minirreproductor en los otros apartados de Tu Vida.
+- Gestión del foco de audio de Android y pausa al desconectar audífonos. Temporizador para pausar en 5, 15, 30, 60 o 90 minutos, cancelable; funciona en el servicio aunque salgas de la pantalla.
+- Cola, canción, posición aproximada, repetición y aleatorio guardados localmente. Al volver a abrir después de cerrar el proceso, la reproducción queda pausada hasta que pulses reproducir. La posición se guarda al cambiar de estado y cada diez segundos durante la reproducción.
+
+La música no hace solicitudes de red, no muestra anuncios y no usa servicios de streaming. Elige archivos disponibles en el teléfono; un proveedor de documentos externo puede requerir su propia conexión para archivos alojados en la nube. Los formatos disponibles dependen de Media3 y de los decodificadores Android (por ejemplo, MP3, AAC/M4A, Ogg, FLAC y WAV compatibles). No incluye ecualizador ni letras en esta versión.
+
+La copia JSON conserva la biblioteca, favoritos, listas y cola como referencias: **no incluye los audios ni transfiere permisos Android**. En otro teléfono, o si moviste/eliminaste archivos, vuelve a elegirlos o a detectar audios; las referencias antiguas pueden requerir quitarse y añadirse de nuevo a las listas. Las copias anteriores a Música siguen siendo compatibles y restauran una biblioteca vacía. El temporizador para dormir no se recupera tras matar el proceso o reiniciar el teléfono; no se inicia música automáticamente. Las restricciones de batería de HyperOS también pueden detener un servicio multimedia y necesitan probarse en el Redmi.
+
 ### Recordatorios y widgets
 
 - Canales independientes para tareas/agenda, partidos, estudio, ejercicio y pagos.
@@ -102,12 +119,14 @@ bash gradlew testDebugUnitTest lintDebug
 bash gradlew connectedDebugAndroidTest
 ```
 
-Las pruebas cubren saldo arrastrado, pagos reales, gastos diarios, frecuencias, cuotas, festivos, ahorro, proyección, presupuesto, deudas, categorías, copias, recurrencias iCal, excepciones, horarios de silencio, repetición de tareas y transición de pomodoro. Los reportes se generan en `android/app/build/reports/`.
+Las pruebas cubren saldo arrastrado, pagos reales, gastos diarios, frecuencias, cuotas, festivos, ahorro, proyección, presupuesto, deudas, categorías, copias, recurrencias iCal, excepciones, horarios de silencio, repetición de tareas, transición de pomodoro y biblioteca/listas de música. Las pruebas en Android reproducen archivos WAV reales de ejemplo, comprueban lectura local, favoritos/listas, segundo plano, guardado de cola/modos/posición y temporizador, y capturan el control multimedia de sistema. Los reportes se generan en `android/app/build/reports/`.
 
-La entrega pasó **58 pruebas de dominio y 8 pruebas en Android 15**, además de compilación y lint sin errores. Las comprobaciones de interfaz en emulador y el alcance final se registran en [docs/VERIFICATION.md](docs/VERIFICATION.md). El permiso real de la cuenta Google y las restricciones de HyperOS necesitan comprobarse en tu Redmi.
+La actualización 1.1.0 pasó **70 pruebas JVM y 10 pruebas en Android 15**, además de compilación y lint sin errores (12 avisos no bloqueantes). Las comprobaciones de interfaz en emulador y el alcance final se registran en [docs/VERIFICATION.md](docs/VERIFICATION.md). El permiso real de la cuenta Google, el control físico de audífonos y las restricciones de HyperOS necesitan comprobarse en tu Redmi.
 
 ## Estructura y cambios
 
 Consulta [AGENTS.md](AGENTS.md) para el mapa detallado y las reglas de trabajo; también se incluye `agents.ms`, como solicitaste. Las referencias originales se conservan en `Proyectos de apoyo/`. El desarrollo principal está en `android/app/src/main/java/co/tuvida/app/`, separado en `data`, `domain`, `platform` y `ui`.
+
+**1.1.0:** reproductor de música local sin anuncios, biblioteca, favoritos, listas, cola, repetición, aleatorio, controles de sistema y temporizador para dormir. Conserva la pantalla al cambiar el tamaño de letra o recrear la Activity.
 
 **1.0.0:** primera app nativa con finanzas, agenda, calendarios de fútbol, tareas, enfoque, salud, avisos, widgets, respaldos y compilación automatizada.

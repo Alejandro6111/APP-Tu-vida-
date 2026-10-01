@@ -11,7 +11,7 @@ Kotlin y Jetpack Compose. El usuario prefiere Android nativo y delega las decisi
 Aplicación personal del usuario para su Redmi 13, en español.
 
 ## Product Purpose
-Reunir finanzas, agenda, partidos, tareas, estudio y salud con recordatorios y widgets.
+Reunir finanzas, agenda, partidos, tareas, estudio, salud y música local sin anuncios, con recordatorios y widgets.
 
 ## Capabilities and Constraints
 Portar todas las capacidades financieras de Mi Plata Clara. Integrar calendarios Google del teléfono; partidos del FC Barcelona, Colombia y Millonarios desde las fuentes de Aurora. Pomodoros y cronómetros configurables; recordatorios basados en agenda; registro diario de comidas y ejercicio con calendario verde/rojo. Notificaciones intensas configurables. README actualizado y AGENTS.md con mapa y regla de commit y push tras cambios satisfactorios.

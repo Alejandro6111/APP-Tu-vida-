@@ -15,6 +15,9 @@ Los datos se guardan en `filesDir/tuvida.json` mediante `AtomicFile` y un `Store
 - `domain/Scheduling.kt`: planificación de avisos, silencio, recurrencias de tareas y finalización de sesiones.
 - `platform/Calendars.kt`: Calendar Provider e iCal con Biweekly. Fuentes exactas de FC Barcelona, Colombia y Millonarios tomadas de Aurora.
 - `platform/Secrets.kt`: cifrado de la URL privada de Google.
+- `domain/Music.kt`: validación, búsqueda, orden y operaciones de biblioteca/listas.
+- `platform/AudioFiles.kt`, `platform/MusicService.kt`: lectura local de audios y servicio Media3 con foco de audio, notificación, persistencia de cola y temporizador para dormir.
+- `ui/MusicScreen.kt`, `ui/MusicViewModel.kt`: biblioteca, favoritos, listas, cola, permisos por acción y control mediante MediaController.
 - `platform/SyncWorker.kt`: sincronización periódica y manual con WorkManager; conserva la caché cuando falla una fuente.
 - `platform/Reminders.kt`: canales Android, AlarmManager, receptores, completar y posponer.
 - `platform/Widgets.kt` y `res/xml/widget_*.xml`: agenda, finanzas, salud y enfoque.

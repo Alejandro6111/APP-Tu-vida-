@@ -40,6 +40,7 @@ import java.time.format.DateTimeFormatter
         }
         item { FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { AssistChip(onClick = { edit(Editor("task")) }, label = { Text("Añadir tarea") }, leadingIcon = { Icon(Icons.Outlined.AddTask, null) }); AssistChip(onClick = { navigate("focus") }, label = { Text("Estudiar") }, leadingIcon = { Icon(Icons.Outlined.Timer, null) }); AssistChip(onClick = { edit(Editor("health")) }, label = { Text("Registrar salud") }, leadingIcon = { Icon(Icons.Outlined.FavoriteBorder, null) }) } }
         item { Section("Lo que viene", action = { TextButton({ navigate("agenda") }) { Text("Ver agenda") } }) }
+        item { AssistChip(onClick = { navigate("music") }, label = { Text("Escuchar mi música") }, leadingIcon = { Icon(Icons.Outlined.MusicNote, null) }) }
         val events = data.events.filter { it.end > now }.sortedBy { it.start }.take(3)
         val tasks = data.tasks.filter { !it.done }.sortedBy { it.due }.take(3)
         if (tasks.isEmpty() && events.isEmpty()) item { Info("Empieza por tu próximo plan", "Añade una tarea o conecta tu calendario en Ajustes.", Icons.Outlined.CalendarMonth) }

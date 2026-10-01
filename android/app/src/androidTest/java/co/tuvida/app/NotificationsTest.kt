@@ -17,10 +17,19 @@ class NotificationsTest {
     @Before fun setup() {
         app = ui.activity.application as TuVidaApplication
         val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
-        automation.executeShellCommand("pm grant co.tuvida.app android.permission.POST_NOTIFICATIONS").close()
+        if (android.os.Build.VERSION.SDK_INT >= 33) automation.grantRuntimePermission(app.packageName, android.Manifest.permission.POST_NOTIFICATIONS)
         automation.executeShellCommand("appops set co.tuvida.app SCHEDULE_EXACT_ALARM allow").close()
         app.getSystemService(NotificationManager::class.java).cancelAll()
         app.store.restore(AppData(preferences = Preferences(football = emptySet(), quietEnabled = false, exerciseReminder = false)))
+    }
+    private fun notification(title: String): android.app.Notification {
+        val manager = app.getSystemService(NotificationManager::class.java)
+        val end = System.currentTimeMillis() + 5000
+        while (System.currentTimeMillis() < end) {
+            manager.activeNotifications.firstOrNull { it.notification.extras.getString("android.title") == title }?.let { return it.notification }
+            Thread.sleep(50)
+        }
+        throw AssertionError("No apareció la notificación: $title")
     }
     @Test fun finishingTimerWithoutAnOpenActivityDeliversNotification() {
         app.store.update { it.copy(focus = FocusState(running = true, deadline = System.currentTimeMillis() + 5000)) }
@@ -37,7 +46,7 @@ class NotificationsTest {
         app.store.update { it.copy(tasks = listOf(task)) }
         val reminder = Reminder("action-test", task.due, task.title, "Completa la tarea", "tasks", task.id)
         Reminders.show(app, reminder)
-        val notification = app.getSystemService(NotificationManager::class.java).activeNotifications.single().notification
+        val notification = notification(task.title)
         notification.actions.first { it.title == "Completar" }.actionIntent.send()
         val end = System.currentTimeMillis() + 5000
         while (System.currentTimeMillis() < end && !app.store.current.tasks.single().done) Thread.sleep(100)
@@ -46,7 +55,7 @@ class NotificationsTest {
     @Test fun snoozeActionIsPersistedForRescheduling() {
         val reminder = Reminder("snooze-test", System.currentTimeMillis(), "Prueba", "Aviso", "tasks")
         Reminders.show(app, reminder)
-        app.getSystemService(NotificationManager::class.java).activeNotifications.single().notification.actions.first { it.title == "En 10 min" }.actionIntent.send()
+        notification("Prueba").actions.first { it.title == "En 10 min" }.actionIntent.send()
         val end = System.currentTimeMillis() + 5000
         while (System.currentTimeMillis() < end && app.store.current.snoozed.isEmpty()) Thread.sleep(100)
         Assert.assertEquals(1, app.store.current.snoozed.size)

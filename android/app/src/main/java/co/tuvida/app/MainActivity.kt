@@ -13,10 +13,11 @@ import co.tuvida.app.ui.*
 class MainActivity : ComponentActivity() {
     private var route by mutableStateOf("home")
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState); enableEdgeToEdge(); route = intent.getStringExtra("route") ?: "home"
+        super.onCreate(savedInstanceState); enableEdgeToEdge(); route = savedInstanceState?.getString("route") ?: intent.getStringExtra("route") ?: "home"
         setContent { val vm: AppViewModel = viewModel(); val data by vm.state.collectAsState(); TuVidaTheme(data.preferences.theme) { App(vm, route) { route = it } } }
         SyncWorker.request(this)
     }
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); route = intent.getStringExtra("route") ?: "home" }
+    override fun onSaveInstanceState(outState: Bundle) { outState.putString("route", route); super.onSaveInstanceState(outState) }
     override fun onResume() { super.onResume(); Reminders.reschedule(this); Widgets.refresh(this) }
 }
