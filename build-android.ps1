@@ -2,6 +2,8 @@ param(
     [string]$JavaHome = $env:JAVA_HOME,
     [string]$SdkRoot = $env:ANDROID_HOME,
     [string]$SegoeFont = '',
+    [ValidateSet('universal', 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64')]
+    [string]$Abi = 'arm64-v8a',
     [switch]$SkipChecks
 )
 $ErrorActionPreference = 'Stop'
@@ -17,6 +19,7 @@ if ($SegoeFont) {
     Copy-Item -LiteralPath $SegoeFont -Destination android/app/src/main/res/font/segoe_semibold.ttf -Force
 }
 $taskArguments = @('-p', 'android', '--no-daemon', 'assembleDebug', '--console=plain')
+if ($Abi -ne 'universal') { $taskArguments += "-PtuVidaAbi=$Abi" }
 if (-not $SkipChecks) { $taskArguments += @('testDebugUnitTest', 'lintDebug') }
 & ./android/gradlew.bat @taskArguments
 if ($LASTEXITCODE -ne 0) { throw 'Falló la compilación o una verificación.' }

@@ -14,7 +14,11 @@ import androidx.media3.session.*
 import co.tuvida.app.TuVidaApplication
 import co.tuvida.app.data.*
 import co.tuvida.app.domain.Music
+import co.tuvida.app.domain.OnlineMusic
+import co.tuvida.app.domain.MusicResult
 import co.tuvida.app.platform.*
+import androidx.work.*
+import com.yausername.youtubedl_android.YoutubeDL
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -24,11 +28,21 @@ data class MusicPlayback(
     val repeat: Int = 0, val shuffle: Boolean = false, val sleepRemaining: Long = 0, val error: String = ""
 )
 
+data class MusicDiscovery(val searching: Boolean = false, val updating: Boolean = false,
+    val searched: Boolean = false, val results: List<MusicResult> = emptyList(), val error: String = "", val notice: String = "")
+data class MusicDownload(val ready: Boolean = false, val busy: Boolean = false, val title: String = "", val percent: Int = 0,
+    val waiting: Boolean = false, val uri: String = "", val error: String = "", val cancelled: Boolean = false)
+
 class MusicViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application as TuVidaApplication
     val playback = MutableStateFlow(MusicPlayback())
     val busy = MutableStateFlow(false)
     val message = MutableStateFlow("")
+    val discovery = MutableStateFlow(MusicDiscovery())
+    val download = MutableStateFlow(MusicDownload())
+    private val work = WorkManager.getInstance(app)
+    private var searchJob: Job? = null
+    private var searchId = ""
     private var controller: MediaController? = null
     private var sleepDeadline = 0L
     private val executor = ContextCompat.getMainExecutor(app)
@@ -45,6 +59,62 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
             }.onFailure { message.value = "No se pudo conectar el reproductor. Cierra y vuelve a abrir Tu Vida." }
         }, executor)
         viewModelScope.launch { while (isActive) { snapshot(); delay(500) } }
+        viewModelScope.launch {
+            work.getWorkInfosForUniqueWorkFlow(MusicDownloadWorker.NAME).collect { history ->
+                val latest = history.maxByOrNull { info -> info.tags.firstOrNull { it.startsWith("created:") }?.substringAfter(':')?.toLongOrNull() ?: 0 }
+                download.value = if (latest == null) MusicDownload(ready = true) else MusicDownload(
+                    ready = true, busy = !latest.state.isFinished,
+                    title = latest.tags.firstOrNull { it.startsWith("title:") }?.substringAfter(':').orEmpty(),
+                    percent = latest.progress.getInt("percent", 0),
+                    waiting = latest.state == WorkInfo.State.ENQUEUED || latest.state == WorkInfo.State.BLOCKED,
+                    uri = latest.outputData.getString("uri").orEmpty(),
+                    error = latest.outputData.getString("error").orEmpty().ifBlank { if (latest.state == WorkInfo.State.FAILED) "Android no pudo completar la descarga. Vuelve a intentarlo." else "" },
+                    cancelled = latest.state == WorkInfo.State.CANCELLED)
+            }
+        }
+    }
+    fun searchOnline(query: String) {
+        if (discovery.value.searching || discovery.value.updating) return
+        discovery.value = MusicDiscovery(searching = true)
+        searchId = "search-${java.util.UUID.randomUUID()}"
+        val process = searchId
+        searchJob = viewModelScope.launch {
+            try {
+                val results = runInterruptible(Dispatchers.IO) { OnlineMusicEngine.search(app, query, process) }
+                discovery.value = MusicDiscovery(searched = true, results = results)
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) { discovery.value = MusicDiscovery(error = OnlineMusic.error(e)) }
+            finally { discovery.value = discovery.value.copy(searching = false) }
+        }
+    }
+    fun cancelSearch() { searchJob?.cancel(); YoutubeDL.destroyProcessById(searchId) }
+    fun downloadSong(result: MusicResult) {
+        if (!download.value.ready || download.value.busy || discovery.value.updating) return
+        if (OnlineMusicEngine.FOLDER in app.store.current.music.excludedFolders) {
+            message.value = "Vuelve a incluir Descargas desde Carpetas excluidas antes de descargar."; return
+        }
+        val request = OneTimeWorkRequestBuilder<MusicDownloadWorker>()
+            .setInputData(workDataOf("video" to result.id, "title" to result.title, "artist" to result.artist))
+            .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+            .addTag("created:${System.currentTimeMillis()}").addTag("title:${result.title}").build()
+        download.value = MusicDownload(ready = true, busy = true, waiting = true, title = result.title)
+        viewModelScope.launch(Dispatchers.IO) {
+            try { work.enqueueUniqueWork(MusicDownloadWorker.NAME, ExistingWorkPolicy.KEEP, request).result.get() }
+            catch (_: Exception) { download.value = MusicDownload(ready = true, error = "No se pudo iniciar la descarga. Vuelve a intentarlo.") }
+        }
+    }
+    fun cancelDownload() { work.cancelUniqueWork(MusicDownloadWorker.NAME) }
+    fun updateMusicEngine() {
+        if (discovery.value.searching || discovery.value.updating || !download.value.ready || download.value.busy) return
+        discovery.value = discovery.value.copy(updating = true, error = "", notice = "")
+        viewModelScope.launch {
+            try {
+                runInterruptible(Dispatchers.IO) { OnlineMusicEngine.init(app); YoutubeDL.updateYoutubeDL(app) }
+                discovery.value = discovery.value.copy(notice = "Motor actualizado. Ya puedes buscar y descargar.")
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) { discovery.value = discovery.value.copy(error = OnlineMusic.error(e)) }
+            finally { discovery.value = discovery.value.copy(updating = false) }
+        }
     }
     private fun snapshot() {
         val p = controller ?: return
@@ -143,5 +213,5 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         val result = controller?.sendCustomCommand(SessionCommand(action, Bundle.EMPTY), args) ?: return
         result.addListener({ runCatching { result.get() }.onSuccess { if (it.resultCode == SessionResult.RESULT_SUCCESS) { sleepDeadline = it.extras.getLong("deadline"); snapshot() } } }, executor)
     }
-    override fun onCleared() { MediaController.releaseFuture(future); super.onCleared() }
+    override fun onCleared() { cancelSearch(); MediaController.releaseFuture(future); super.onCleared() }
 }

@@ -4,6 +4,7 @@ Tu app personal para reunir dinero, agenda, estudio, salud y música. **Android 
 
 <p><img src="docs/images/hoy.png" width="240" alt="Pantalla Hoy con datos de ejemplo" /> <img src="docs/images/salud.png" width="240" alt="Calendario de salud con ejercicio y descanso registrados" /> <img src="docs/images/dinero-oscuro.png" width="240" alt="Finanzas en tema oscuro con datos de ejemplo" /></p>
 <p><img src="docs/images/musica-oscuro.png" width="240" alt="Música en negro y dorado con portada local de vinilo" /> <img src="docs/images/musica-carpetas.png" width="240" alt="Carpetas del sistema con audios de prueba y acción de excluir" /></p>
+<p><img src="docs/images/musica-descubrir.png" width="240" alt="Buscador integrado con resultados de ejemplo y descarga de audio" /></p>
 
 Capturas reales del emulador Android; los datos mostrados son ejemplos de verificación.
 
@@ -19,6 +20,7 @@ Al abrir:
 4. Mantén pulsada la pantalla principal → **Widgets → Tu Vida** para añadir Agenda, Finanzas, Salud y Enfoque.
 5. Abre **Música** desde el icono de nota musical superior o **Hoy → Escuchar mi música**. Pulsa **Detectar audios** para autorizar y leer los audios del teléfono, o **Añadir canciones** para elegir varios archivos con el selector Android. El permiso de audios se solicita únicamente al pulsar Detectar; elegir archivos no necesita acceso general al almacenamiento.
 6. En **Música → Carpetas**, o **Biblioteca → Agrupar por carpetas**, abre una carpeta para ver y reproducir sus audios. Usa el icono de carpeta excluida o **Excluir esta carpeta** para retirar un bloque, como audios de WhatsApp. La confirmación muestra la ruta y cantidad; los archivos permanecen en el teléfono. La exclusión se recuerda al detectar de nuevo. Desde **Carpetas excluidas** puedes volver a incluirla y pulsar Detectar audios.
+7. En **Música → Buscar y descargar**, o en la pestaña **Descubrir**, escribe una canción, un artista o pega un enlace HTTPS de YouTube. Pulsa **Buscar música → Descargar audio**. Al terminar aparece en Biblioteca y en **Carpetas → Descargas**, lista para reproducir sin conexión. La primera descarga puede tardar más mientras se prepara el motor.
 
 Para actualizar desde 1.0.0, instala el nuevo APK sobre la app existente, sin desinstalarla: conserva los datos locales cuando Android acepta la misma firma.
 
@@ -67,7 +69,7 @@ Los feeds públicos pueden cambiar horarios o no tener encuentros futuros. Tu Vi
 - Calendario propio: **verde** al registrar ejercicio, **rojo** al registrar un día sin ejercicio, **neutro** cuando todavía no se ha registrado. Cada estado también tiene texto accesible.
 - Edición de días anteriores, días de ejercicio y minutos del mes. No permite registrar actividad en días futuros.
 
-### Música local, sin anuncios
+### Música y buscador propio, sin anuncios
 
 - Biblioteca de audios del teléfono y selección de varios archivos con acceso persistente de Android. Se leen título, artista, álbum y duración; búsqueda que ignora acentos y orden por título, artista, duración o adición reciente.
 - Agrupación por carpetas reales, diferenciando ruta completa y volumen de almacenamiento; búsqueda de carpetas, contador de audios/duración y reproducción del contenido de cada una. Excluir una carpeta limpia sus referencias en biblioteca, favoritos, listas y cola, sin borrar archivos, y la omite en futuras detecciones/importaciones. Volver a incluirla permite cargarla de nuevo con Detectar audios.
@@ -78,8 +80,16 @@ Los feeds públicos pueden cambiar horarios o no tener encuentros futuros. Tu Vi
 - Reproducción en segundo plano mediante Media3 y servicio Android `mediaPlayback`, con controles de sistema, notificación multimedia y sesión para pantalla bloqueada/controles de audífonos. Minirreproductor en los otros apartados de Tu Vida.
 - Gestión del foco de audio de Android y pausa al desconectar audífonos. Temporizador para pausar en 5, 15, 30, 60 o 90 minutos, cancelable; funciona en el servicio aunque salgas de la pantalla.
 - Cola, canción, posición aproximada, repetición y aleatorio guardados localmente. Al volver a abrir después de cerrar el proceso, la reproducción queda pausada hasta que pulses reproducir. La posición se guarda al cambiar de estado y cada diez segundos durante la reproducción.
+- Buscador integrado de YouTube: hasta 20 resultados por canción/artista, con título, canal/artista y duración cuando el proveedor la informa. También acepta un enlace individual de YouTube, YouTube Music o youtu.be; los enlaces con una lista descargan solo el video seleccionado. Las emisiones en directo se omiten.
+- Descarga de audio MP3 con [yt-dlp integrado mediante youtubedl-android 0.18.1](https://github.com/yausername/youtubedl-android) y FFmpeg; Python y QuickJS incluidos en el APK. No necesita Termux, cuenta de Google, claves API ni servidor personal. El APK aumenta de tamaño al incluir estos motores; el instalador personal incluye solo ARM64 para reducirlo.
+- Una descarga a la vez mediante WorkManager, con estado/progreso en la app, notificación de Android y cancelación desde ambos lugares. Continúa al cambiar de apartado o enviar la app al fondo; Android decide cuándo ejecutar trabajos pendientes y puede detenerlos. Sin conexión espera hasta recuperarla; los fallos del proveedor se muestran para que vuelvas a intentar. El límite del archivo de origen es 500 MiB. Solo los audios terminados se incorporan a la biblioteca; se reutiliza un archivo ya descargado para evitar duplicados.
+- **Actualizar motor** obtiene la versión estable de yt-dlp desde GitHub. Úsalo si YouTube cambia y deja de funcionar una búsqueda o descarga. La app muestra problemas de conexión/acceso sin exponer la salida interna del motor. El permiso de notificaciones se pide al pulsar Descargar en Android 13+; si lo rechazas puedes seguir usando el progreso y la cancelación dentro de la app.
 
-La música no hace solicitudes de red, no muestra anuncios y no usa servicios de streaming. Elige archivos disponibles en el teléfono; un proveedor de documentos externo puede requerir su propia conexión para archivos alojados en la nube. Los formatos disponibles dependen de Media3 y de los decodificadores Android (por ejemplo, MP3, AAC/M4A, Ogg, FLAC y WAV compatibles). No incluye ecualizador ni letras en esta versión.
+Reproducir y leer la biblioteca sigue siendo local, sin anuncios. Buscar/descargar usa Internet y transmite la búsqueda o el enlace seleccionado a YouTube; actualizar el motor consulta GitHub. El proveedor puede restringir contenido, región o acceso; no se descargan contenidos privados, de pago ni protegidos mediante DRM. Los formatos locales disponibles dependen de Media3 y los decodificadores Android (por ejemplo, MP3, AAC/M4A, Ogg, FLAC y WAV compatibles). No incluye ecualizador ni letras.
+
+Las descargas se guardan en `filesDir/music/`, dentro del espacio privado de Tu Vida, y se leen con un FileProvider limitado a esa carpeta. No requiere permisos de almacenamiento ni acceso general a archivos. **Desinstalar la app o borrar sus datos elimina también estos audios.** No se copian a la carpeta pública de Descargas del teléfono. Quitar una canción de la biblioteca o excluir Descargas conserva el archivo; Detectar audios puede reincorporarlo al volver a incluir esa carpeta. Si Descargas está excluida, hay que incluirla antes de descargar otra canción. La copia JSON guarda referencias, no estos archivos de audio.
+
+Si restauras una copia en otro teléfono y falta un audio descargado, busca la misma canción y pulsa **Recuperar descarga**; vuelve a descargar el archivo conservando la misma referencia en tus listas. Si el archivo ya existe, se reutiliza.
 
 La copia JSON conserva la biblioteca, favoritos, listas y cola como referencias: **no incluye los audios ni transfiere permisos Android**. En otro teléfono, o si moviste/eliminaste archivos, vuelve a elegirlos o a detectar audios; las referencias antiguas pueden requerir quitarse y añadirse de nuevo a las listas. Las copias anteriores a Música siguen siendo compatibles y restauran una biblioteca vacía. El temporizador para dormir no se recupera tras matar el proceso o reiniciar el teléfono; no se inicia música automáticamente. Las restricciones de batería de HyperOS también pueden detener un servicio multimedia y necesitan probarse en el Redmi.
 
@@ -94,7 +104,7 @@ La copia JSON conserva la biblioteca, favoritos, listas y cola como referencias:
 
 ## Datos y copias
 
-Los datos financieros, de salud y tareas permanecen en almacenamiento privado del teléfono (`AtomicFile`, JSON validado). No hay backend, publicidad ni analítica. Las únicas consultas de red son los calendarios activados. La copia JSON es un archivo sin cifrar elegido por el usuario; guárdala en un lugar privado. Exportar no incluye la URL secreta iCal, los eventos sincronizados ni los IDs de calendario del teléfono. Al restaurar, vuelve a seleccionar tus calendarios.
+Los datos financieros, de salud y tareas permanecen en almacenamiento privado del teléfono (`AtomicFile`, JSON validado). No hay backend propio, publicidad ni analítica. Las consultas de red son los calendarios activados y, cuando lo solicitas, la búsqueda/descarga de música y actualización de su motor; estas acciones no transmiten los datos de finanzas o salud. La copia JSON es un archivo sin cifrar elegido por el usuario; guárdala en un lugar privado. Exportar no incluye la URL secreta iCal, los eventos sincronizados ni los IDs de calendario del teléfono. Al restaurar, vuelve a seleccionar tus calendarios.
 
 Importar valida la copia completa y muestra una confirmación antes de reemplazar datos. Acepta el formato de Tu Vida v1 y las copias de Mi Plata Clara v8. Desinstalar o borrar los datos de Android elimina la información local; exporta antes. Las copias automáticas del sistema están excluidas para evitar transferir claves o datos privados sin la copia explícita.
 
@@ -105,6 +115,8 @@ Requisitos: **JDK 17**, Android SDK **API 35**, build-tools 35.0.0 e Internet pa
 ```powershell
 ./build-android.ps1 -JavaHome 'C:\ruta\jdk-17' -SdkRoot 'C:\ruta\android-sdk'
 ```
+
+El script genera por defecto **ARM64 (`arm64-v8a`)** para el Redmi. Para otro teléfono usa `-Abi armeabi-v7a`; para el emulador habitual, `-Abi x86_64`; `-Abi universal` incluye las cuatro arquitecturas y ocupa más. Al ejecutar Gradle directamente se incluyen todas, salvo que indiques `-PtuVidaAbi=arm64-v8a` (u otra arquitectura compatible).
 
 En Android Studio abre la carpeta `android`. En Linux/macOS:
 
@@ -125,11 +137,20 @@ bash gradlew connectedDebugAndroidTest
 
 Las pruebas cubren saldo arrastrado, pagos reales, gastos diarios, frecuencias, cuotas, festivos, ahorro, proyección, presupuesto, deudas, categorías, copias, recurrencias iCal, excepciones, horarios de silencio, repetición de tareas, transición de pomodoro y biblioteca/listas de música. Las pruebas en Android reproducen archivos WAV reales de ejemplo, comprueban lectura local, favoritos/listas, segundo plano, guardado de cola/modos/posición y temporizador, y capturan el control multimedia de sistema. Los reportes se generan en `android/app/build/reports/`.
 
-La actualización 1.2.0 pasó **77 pruebas JVM y 12 pruebas en Android 15**, además de compilación y lint sin errores (12 avisos no bloqueantes). Se comprueba exclusión de una carpeta durante la reproducción, limpieza de referencias, conservación de archivos, omisión al detectar otra vez, restauración de la carpeta, compatibilidad de copias anteriores y portadas locales. Las comprobaciones de interfaz en emulador y el alcance final se registran en [docs/VERIFICATION.md](docs/VERIFICATION.md). El permiso real de la cuenta Google, el control físico de audífonos y las restricciones de HyperOS necesitan comprobarse en tu Redmi.
+La actualización 1.3.0 pasó **82 pruebas JVM y 15 pruebas en Android 15**, con la prueba externa de YouTube activada, además de compilación y lint sin errores (13 avisos no bloqueantes en el informe final, incluido el de ABI para ChromeOS). Se verifica el motor nativo, conversión local a MP3, lectura privada, incorporación sin duplicados y una búsqueda/descarga real de un audio de prueba con la app enviada al fondo. Se conservan las comprobaciones de finanzas, agenda, avisos, biblioteca, carpetas, copias y portadas. Las capturas de Descubrir se inspeccionan en claro, oscuro y letra 1.3. Los detalles y límites se registran en [docs/VERIFICATION.md](docs/VERIFICATION.md). La cuenta Google, los audífonos físicos y HyperOS necesitan comprobarse en tu Redmi.
+
+La prueba externa se activa explícitamente y depende del proveedor; las verificaciones habituales la omiten para no exigir YouTube en cada compilación:
+
+```sh
+cd android
+./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.onlineMusicSmoke=true
+```
 
 ## Estructura y cambios
 
 Consulta [AGENTS.md](AGENTS.md) para el mapa detallado y las reglas de trabajo; también se incluye `agents.ms`, como solicitaste. Las referencias originales se conservan en `Proyectos de apoyo/`. El desarrollo principal está en `android/app/src/main/java/co/tuvida/app/`, separado en `data`, `domain`, `platform` y `ui`.
+
+**1.3.0:** buscador de YouTube, enlaces individuales, descarga de audio MP3 dentro de la app, progreso/cancelación, actualización manual del motor y entrada automática a la biblioteca. Mantiene el formato de datos y las copias anteriores. El instalador personal se compila para ARM64; Gradle conserva la variante universal para otros dispositivos y verificaciones. Consulta las atribuciones de las dependencias nativas en [THIRD_PARTY.md](THIRD_PARTY.md).
 
 **1.2.0:** negro y dorado en la app, icono y widgets; carpetas reales con exclusión persistente y restauración; portadas locales para canciones descargadas. Las copias anteriores a 1.2.0 se cargan con carpetas desconocidas y sin exclusiones; Detectar audios actualiza su ubicación. Las nuevas copias conservan rutas y exclusiones. Si un proveedor de documentos no informa la ruta, el audio aparece en «Carpeta no disponible» y puede quitarse individualmente.
 

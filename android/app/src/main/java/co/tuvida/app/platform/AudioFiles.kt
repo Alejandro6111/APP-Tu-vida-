@@ -20,6 +20,7 @@ object AudioFiles {
             else path.substringBeforeLast('/', "")
     }
     private fun readFolder(context: Context, uri: Uri): String {
+        if (uri.authority == "${context.packageName}.musicfiles") return OnlineMusicEngine.FOLDER
         val mediaPath = runCatching { context.contentResolver.query(uri, pathColumns(), null, null, null)?.use { if (it.moveToFirst()) folder(it, 0) else "" } }.getOrNull().orEmpty()
         if (mediaPath.isNotBlank()) return mediaPath
         return runCatching {
@@ -42,7 +43,7 @@ object AudioFiles {
                         cursor.getString(2).orEmpty().replace("<unknown>", "").take(500), cursor.getString(3).orEmpty().replace("<unknown>", "").take(500), cursor.getLong(4).coerceAtLeast(0), folder(cursor, 5)))
                 }
             }
-        } ?: emptyList()
+        }.orEmpty() + OnlineMusicEngine.localSongs(context)
     }
     fun read(context: Context, uri: Uri): Song {
         require(uri.scheme == "content") { "Elige un archivo de audio desde el selector de Android." }

@@ -18,6 +18,7 @@ Los datos se guardan en `filesDir/tuvida.json` mediante `AtomicFile` y un `Store
 - `domain/Music.kt`: validación, búsqueda, orden y operaciones de biblioteca/listas.
 - `platform/AudioFiles.kt`, `platform/MusicService.kt`: lectura local de audios y servicio Media3 con foco de audio, notificación, persistencia de cola y temporizador para dormir.
 - `ui/MusicScreen.kt`, `ui/MusicViewModel.kt`: biblioteca, favoritos, listas, cola, permisos por acción y control mediante MediaController.
+- `domain/OnlineMusic.kt`, `platform/OnlineMusicEngine.kt`, `platform/MusicDownloadWorker.kt`, `ui/MusicDiscoveryScreen.kt`: búsqueda YouTube, normalización de enlaces, yt-dlp/FFmpeg integrados, descarga privada durable y pantalla Descubrir. FileProvider expone exclusivamente `filesDir/music`; no ampliar sus rutas a todos los datos de la app.
 - `platform/SyncWorker.kt`: sincronización periódica y manual con WorkManager; conserva la caché cuando falla una fuente.
 - `platform/Reminders.kt`: canales Android, AlarmManager, receptores, completar y posponer.
 - `platform/Widgets.kt` y `res/xml/widget_*.xml`: agenda, finanzas, salud y enfoque.

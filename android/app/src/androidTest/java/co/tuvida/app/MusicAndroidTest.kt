@@ -86,7 +86,9 @@ class MusicAndroidTest {
         InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("settings put system font_scale 1.0").close()
         ui.waitUntil(10000) { ui.activity.resources.configuration.fontScale < 1.1f }
         Thread.sleep(800)
-        ui.onNodeWithText("Listas").performClick(); ui.onNodeWithText("Para caminar").performScrollTo().performClick(); capture("music-playlist")
+        ui.onNodeWithText("Listas").performClick()
+        ui.onNodeWithTag("music-content").performScrollToNode(hasText("Para caminar"))
+        ui.onNodeWithText("Para caminar").performClick(); capture("music-playlist")
         ui.onNodeWithText("Cola", substring = false).performClick(); ui.onNodeWithText("Brisa de ejemplo", substring = false).performScrollTo(); capture("music-queue")
         ui.onNodeWithText("Hoy").performClick(); capture("music-mini")
         ui.runOnIdle { p.pause(); p.release() }

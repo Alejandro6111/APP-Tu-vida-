@@ -49,6 +49,13 @@ import co.tuvida.app.domain.Music
     val context = LocalContext.current
     val playback by vm.playback.collectAsState(); val busy by vm.busy.collectAsState()
     var tab by rememberSaveable { mutableIntStateOf(0) }
+    var onlineQuery by rememberSaveable { mutableStateOf("") }
+    var pendingDownload by rememberSaveable { mutableStateOf("") }
+    val download by vm.download.collectAsState()
+    val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        vm.discovery.value.results.find { result -> result.id == pendingDownload }?.let(vm::downloadSong)
+        pendingDownload = ""
+    }
     var query by rememberSaveable { mutableStateOf("") }; var sort by rememberSaveable { mutableStateOf("title") }
     var selected by rememberSaveable { mutableStateOf("") }
     var selectedFolder by rememberSaveable { mutableStateOf<String?>(null) }
@@ -78,11 +85,17 @@ import co.tuvida.app.domain.Music
     BackHandler(enabled = selected.isNotEmpty() || editName || selectedFolder != null) { selected = ""; selectedFolder = null; editName = false; query = "" }
     Column {
         ScrollableTabRow(selectedTabIndex = tab, edgePadding = 12.dp) {
-            listOf("Biblioteca", "Favoritos", "Listas", "Cola", "Carpetas").forEachIndexed { index, title ->
+            listOf("Biblioteca", "Favoritos", "Listas", "Cola", "Carpetas", "Descubrir").forEachIndexed { index, title ->
                 Tab(tab == index, { tab = index; selected = ""; selectedFolder = null; editName = false; query = "" }, text = { Text(title) })
             }
         }
-        LazyColumn(modifier = Modifier.testTag("music-content"), contentPadding = PaddingValues(16.dp, 12.dp, 16.dp, 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (tab == 5) MusicDiscoveryScreen(data, vm, onlineQuery, { onlineQuery = it }, { result ->
+            if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                pendingDownload = result.id
+                notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else vm.downloadSong(result)
+        }) else LazyColumn(modifier = Modifier.testTag("music-content"), contentPadding = PaddingValues(16.dp, 12.dp, 16.dp, 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (download.busy || download.error.isNotBlank()) item { MusicDownloadCard(data, vm, download) }
             item {
                 Text("Tu música, a tu ritmo", style = MaterialTheme.typography.headlineSmall)
                 Text("Canciones descargadas · Sin anuncios", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
@@ -91,6 +104,7 @@ import co.tuvida.app.domain.Music
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     FilledTonalButton({ picker.launch(arrayOf("audio/*")) }, enabled = !busy) { Icon(Icons.Outlined.Add, null); Spacer(Modifier.width(8.dp)); Text("Añadir canciones") }
                     OutlinedButton({ if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) vm.scan() else request.launch(permission) }, enabled = !busy) { Text("Detectar audios") }
+                    FilledTonalButton({ tab = 5 }) { Icon(Icons.Outlined.Search, null); Spacer(Modifier.width(8.dp)); Text("Buscar y descargar") }
                 }
                 if (busy) { LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 8.dp)); Text("Leyendo canciones…", style = MaterialTheme.typography.bodySmall) }
             }
