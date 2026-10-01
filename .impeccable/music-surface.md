@@ -6,11 +6,11 @@ Modo: Operate. Usuario en su Redmi con canciones descargadas. Acceso desde Hoy y
 
 THESIS: escuchar canciones propias y organizarlas sin interrupciones publicitarias.
 
-OWN-WORLD: heredar petróleo, marfil, verde y dorado, tipografía Semibold y componentes Material de Tu Vida.
+OWN-WORLD: negro y dorado solicitados por el usuario, con marfil en tema claro; salvia, cobre y ciruela en los vinilos. Tipografía Semibold y componentes Material de Tu Vida.
 
-STORY: elegir o detectar archivos, reproducir, marcar favoritos y formar listas; controlar la cola sin salir de la app.
+STORY: elegir o detectar archivos, agrupar por carpetas del sistema y excluir bloques de audios no musicales; reproducir, marcar favoritos, formar listas y controlar la cola sin salir de la app.
 
-FIRST VIEWPORT: tabs Biblioteca/Favoritos/Listas/Cola arriba, acciones de carga y panel tonal del audio actual con progreso y controles; biblioteca desplazable debajo.
+FIRST VIEWPORT: tabs Biblioteca/Favoritos/Listas/Cola/Carpetas arriba, acciones de carga y panel tonal del audio actual con portada, progreso y controles; biblioteca desplazable y acceso Agrupar por carpetas debajo.
 
 FORM: extensión directa del sistema existente, código nativo, sin torneo de conceptos ni cambio de identidad. Continuidad de reproducción mediante minirreproductor en otros apartados.
 

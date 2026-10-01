@@ -30,7 +30,7 @@ class MusicAndroidTest {
         InstrumentationRegistry.getInstrumentation().uiAutomation.grantRuntimePermission(app.packageName, if (android.os.Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE)
         ui.runOnIdle { app.store.restore(AppData(preferences = Preferences(football = emptySet(), notifications = false))) }
     }
-    private fun track(title: String): Song {
+    private fun track(title: String, folder: String = "Music/TuVidaTests"): Song {
         val rate = 8000; val samples = rate * 60; val pcmBytes = samples * 2
         val bytes = ByteBuffer.allocate(44 + pcmBytes).order(ByteOrder.LITTLE_ENDIAN).apply {
             put("RIFF".toByteArray()); putInt(36 + pcmBytes); put("WAVEfmt ".toByteArray()); putInt(16)
@@ -41,7 +41,7 @@ class MusicAndroidTest {
         val values = ContentValues().apply {
             put(MediaStore.Audio.Media.DISPLAY_NAME, "tuvida-test-${System.nanoTime()}.wav")
             put(MediaStore.Audio.Media.TITLE, title); put(MediaStore.Audio.Media.MIME_TYPE, "audio/wav")
-            if (android.os.Build.VERSION.SDK_INT >= 29) { put(MediaStore.Audio.Media.RELATIVE_PATH, "Music/TuVidaTests"); put(MediaStore.Audio.Media.IS_PENDING, 1) }
+            if (android.os.Build.VERSION.SDK_INT >= 29) { put(MediaStore.Audio.Media.RELATIVE_PATH, folder); put(MediaStore.Audio.Media.IS_PENDING, 1) }
         }
         val uri = app.contentResolver.insert(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, values)!!
         uris += uri
@@ -61,7 +61,7 @@ class MusicAndroidTest {
     }
     @Test fun favoritesPlaylistsAndNativeScreens() {
         val a = track("Brisa de ejemplo"); val b = track("Camino de ejemplo")
-        ui.runOnIdle { app.store.update { it.copy(music = MusicLibrary(songs = listOf(a, b))) } }
+        ui.runOnIdle { app.store.update { it.copy(music = MusicLibrary(songs = listOf(a, b)), preferences = it.preferences.copy(theme = "light")) } }
         ui.onNodeWithContentDescription("Música").performClick()
         ui.waitUntil(10000) { ui.onAllNodesWithText("Conectando reproductor").fetchSemanticsNodes().isEmpty() }
         ui.onNodeWithContentDescription("Marcar favorito: Brisa de ejemplo").performScrollTo().performClick()
@@ -90,6 +90,54 @@ class MusicAndroidTest {
         ui.onNodeWithText("Cola", substring = false).performClick(); ui.onNodeWithText("Brisa de ejemplo", substring = false).performScrollTo(); capture("music-queue")
         ui.onNodeWithText("Hoy").performClick(); capture("music-mini")
         ui.runOnIdle { p.pause(); p.release() }
+    }
+    @Test fun foldersExcludeRescanRestoreAndKeepFilesAndPlaybackCoherent() {
+        val a = track("Nota de voz de ejemplo", "Music/TuVidaTests/WhatsApp Audio")
+        val b = track("Otro audio de ejemplo", "Music/TuVidaTests/WhatsApp Audio")
+        val c = track("Canción de ejemplo", "Music/TuVidaTests/Canciones")
+        Assert.assertTrue(a.folder.isNotBlank()); Assert.assertEquals(a.folder, b.folder); Assert.assertNotEquals(a.folder, c.folder)
+        Assert.assertEquals(a.folder, AudioFiles.scan(app).first { it.uri == a.uri }.folder)
+        ui.runOnIdle { app.store.update { it.copy(music = MusicLibrary(songs = listOf(a, b, c), favorites = setOf(a.uri), playlists = listOf(MusicPlaylist(name = "Ejemplo", songs = listOf(a.uri, c.uri))))) } }
+        ui.onNodeWithContentDescription("Música").performClick()
+        ui.waitUntil(10000) { ui.onAllNodesWithText("Conectando reproductor").fetchSemanticsNodes().isEmpty() }
+        ui.onNodeWithText("Agrupar por carpetas").performScrollTo().performClick()
+        ui.onNodeWithText("WhatsApp Audio", substring = false).performScrollTo().assertExists(); capture("music-folders-dark")
+        ui.onNodeWithText("WhatsApp Audio", substring = false).performClick()
+        ui.onNodeWithText("Nota de voz de ejemplo", substring = false).performScrollTo().assertExists(); capture("music-folder-songs")
+        ui.onNodeWithText("Reproducir todo").performScrollTo().performClick()
+        val p = controller()
+        ui.waitUntil(15000) { var playing = false; ui.runOnIdle { playing = p.isPlaying }; playing }
+        ui.onNodeWithText("Todas las carpetas").performScrollTo().performClick()
+        ui.onNodeWithTag("music-content").performScrollToNode(hasContentDescription("Excluir carpeta ${a.folder}"))
+        ui.onNodeWithContentDescription("Excluir carpeta ${a.folder}").performClick(); capture("music-folder-confirm")
+        ui.onNodeWithText("Cancelar", substring = false).performClick()
+        Assert.assertEquals(3, app.store.current.music.songs.size)
+        ui.onNodeWithTag("music-content").performScrollToNode(hasContentDescription("Excluir carpeta ${a.folder}"))
+        ui.onNodeWithContentDescription("Excluir carpeta ${a.folder}").performClick()
+        ui.onNodeWithText("Excluir carpeta", substring = false).performClick()
+        ui.waitUntil(10000) { a.folder in app.store.current.music.excludedFolders && app.store.current.music.songs == listOf(c) }
+        ui.waitUntil(10000) { var empty = false; ui.runOnIdle { empty = p.mediaItemCount == 0 }; empty }
+        Assert.assertTrue(app.store.current.music.favorites.isEmpty()); Assert.assertEquals(listOf(c.uri), app.store.current.music.playlists.single().songs)
+        Assert.assertEquals(app.store.current.music, Backup.decode(Backup.encode(app.store.current)).music)
+        listOf(a, b).forEach { song -> app.contentResolver.openInputStream(android.net.Uri.parse(song.uri))!!.use { Assert.assertEquals('R'.code, it.read()) } }
+        ui.onNodeWithText("Detectar audios").performScrollTo().performClick()
+        ui.waitUntil(10000) { app.store.current.music.songs.any { it.uri == c.uri } && ui.onAllNodesWithText("Leyendo canciones…").fetchSemanticsNodes().isEmpty() }
+        Assert.assertFalse(app.store.current.music.songs.any { it.folder == a.folder })
+        ui.onNodeWithText("Carpetas excluidas").performScrollTo(); capture("music-folders-excluded")
+        ui.onNodeWithContentDescription("Volver a incluir carpeta ${a.folder}").performScrollTo().performClick()
+        ui.waitUntil(10000) { app.store.current.music.excludedFolders.isEmpty() }
+        ui.onNodeWithText("Detectar audios").performScrollTo().performClick()
+        ui.waitUntil(10000) { app.store.current.music.songs.map { it.uri }.containsAll(listOf(a.uri, b.uri, c.uri)) }
+        ui.runOnIdle { p.release() }
+    }
+    @Test fun localArtworkAlwaysExistsForDownloadsAndSystemControls() {
+        val song = track("Descarga sin portada")
+        val cover = kotlinx.coroutines.runBlocking { SongArtwork.load(app, song) }
+        Assert.assertEquals(192, cover.width); Assert.assertEquals(192, cover.height)
+        val first = SongArtwork.fallbackBytes(song); val repeated = SongArtwork.fallbackBytes(song)
+        Assert.assertArrayEquals(first, repeated)
+        Assert.assertNotNull(android.graphics.BitmapFactory.decodeByteArray(first, 0, first.size))
+        Assert.assertArrayEquals(first, song.mediaItem().mediaMetadata.artworkData)
     }
     @Test fun playbackSurvivesBackgroundAndKeepsModesQueueAndSleep() {
         val a = track("Prueba de audio uno"); val b = track("Prueba de audio dos")

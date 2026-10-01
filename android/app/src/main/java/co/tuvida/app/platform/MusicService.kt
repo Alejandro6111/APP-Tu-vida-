@@ -19,7 +19,8 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 
 fun Song.mediaItem(): MediaItem = MediaItem.Builder().setMediaId(uri).setUri(uri)
-    .setMediaMetadata(MediaMetadata.Builder().setTitle(title).setArtist(artist.ifBlank { "Artista desconocido" }).setAlbumTitle(album).build()).build()
+    .setMediaMetadata(MediaMetadata.Builder().setTitle(title).setArtist(artist.ifBlank { "Artista desconocido" }).setAlbumTitle(album)
+        .setArtworkData(SongArtwork.fallbackBytes(this), MediaMetadata.PICTURE_TYPE_FRONT_COVER).build()).build()
 
 class MusicService : MediaSessionService() {
     private lateinit var player: ExoPlayer

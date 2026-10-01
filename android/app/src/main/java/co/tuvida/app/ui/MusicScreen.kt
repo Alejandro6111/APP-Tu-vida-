@@ -19,6 +19,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -32,6 +33,8 @@ import co.tuvida.app.domain.Music
     val song = data.songs.find { it.uri == playback.current } ?: return
     Surface(color = MaterialTheme.colorScheme.secondaryContainer) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.clickable(onClickLabel = "Abrir reproductor", onClick = open).size(48.dp), contentAlignment = Alignment.Center) { SongCover(song, 40.dp) }
+            Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f).clickable(onClickLabel = "Abrir reproductor", onClick = open).heightIn(min = 56.dp).padding(vertical = 8.dp)) {
                 Text(song.title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)
                 Text(song.artist.ifBlank { "Artista desconocido" }, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
@@ -48,6 +51,8 @@ import co.tuvida.app.domain.Music
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var query by rememberSaveable { mutableStateOf("") }; var sort by rememberSaveable { mutableStateOf("title") }
     var selected by rememberSaveable { mutableStateOf("") }
+    var selectedFolder by rememberSaveable { mutableStateOf<String?>(null) }
+    var excludeFolder by remember { mutableStateOf<Music.Folder?>(null) }
     var editName by rememberSaveable { mutableStateOf(false) }; var name by rememberSaveable { mutableStateOf("") }
     var addSong by remember { mutableStateOf<Song?>(null) }
     var delete by remember { mutableStateOf<MusicPlaylist?>(null) }
@@ -63,19 +68,21 @@ import co.tuvida.app.domain.Music
         1 -> data.songs.filter { it.uri in data.favorites }
         2 -> playlist?.songs?.mapNotNull { byId[it] } ?: emptyList()
         3 -> playback.queue.mapNotNull { byId[it] }
+        4 -> data.songs.filter { it.folder == selectedFolder }
         else -> data.songs
     }
     val songs = remember(source, query, sort, tab) {
-        if (tab >= 2) Music.search(source, query, "title").let { matches -> source.filter { it in matches } } else Music.search(source, query, sort)
+        if (tab == 2 || tab == 3) Music.search(source, query, "title").let { matches -> source.filter { it in matches } } else Music.search(source, query, sort)
     }
-    BackHandler(enabled = selected.isNotEmpty() || editName) { selected = ""; editName = false }
+    val folders = remember(data.songs) { Music.folders(data.songs) }
+    BackHandler(enabled = selected.isNotEmpty() || editName || selectedFolder != null) { selected = ""; selectedFolder = null; editName = false; query = "" }
     Column {
         ScrollableTabRow(selectedTabIndex = tab, edgePadding = 12.dp) {
-            listOf("Biblioteca", "Favoritos", "Listas", "Cola").forEachIndexed { index, title ->
-                Tab(tab == index, { tab = index; selected = ""; editName = false; query = "" }, text = { Text(title) })
+            listOf("Biblioteca", "Favoritos", "Listas", "Cola", "Carpetas").forEachIndexed { index, title ->
+                Tab(tab == index, { tab = index; selected = ""; selectedFolder = null; editName = false; query = "" }, text = { Text(title) })
             }
         }
-        LazyColumn(contentPadding = PaddingValues(16.dp, 12.dp, 16.dp, 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        LazyColumn(modifier = Modifier.testTag("music-content"), contentPadding = PaddingValues(16.dp, 12.dp, 16.dp, 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
                 Text("Tu música, a tu ritmo", style = MaterialTheme.typography.headlineSmall)
                 Text("Canciones descargadas · Sin anuncios", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
@@ -90,7 +97,40 @@ import co.tuvida.app.domain.Music
             if (!playback.connected) item { Info("Conectando reproductor", "Los controles estarán disponibles en un momento.") }
             byId[playback.current]?.let { song -> item { MusicPlayer(song, data, playback, vm) } }
             if (playback.error.isNotBlank()) item { Info("Archivo no disponible", playback.error, Icons.Outlined.ErrorOutline) }
-            if (tab == 2 && playlist == null) {
+            if (tab == 4 && selectedFolder == null) {
+                item {
+                    Section("Carpetas del teléfono", "${folders.size} carpetas · ${data.songs.size} audios")
+                    Text("Agrupadas por su ubicación real. Excluye una carpeta para que sus audios no vuelvan a aparecer al detectar.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                if (folders.isNotEmpty()) item { Field("Buscar carpeta", query, { query = it }) }
+                val visibleFolders = folders.filter { query.isBlank() || it.path.contains(query, ignoreCase = true) || Music.folderLabel(it.path).contains(query, ignoreCase = true) }
+                if (visibleFolders.isEmpty()) item { Info(if (query.isBlank()) "Todavía no hay carpetas" else "No hay coincidencias", if (query.isBlank()) "Pulsa Detectar audios para leer las carpetas del teléfono." else "Prueba otro nombre de carpeta.", Icons.Outlined.Folder) }
+                items(visibleFolders, key = { "folder:${it.path}" }) { folder ->
+                    ListItem(
+                        headlineContent = { Text(Music.folderLabel(folder.path), maxLines = 2, overflow = TextOverflow.Ellipsis) },
+                        supportingContent = { Column {
+                            Text("${folder.songs.size} audios · ${Music.time(folder.songs.sumOf { it.duration })}")
+                            Text(folder.path.ifBlank { "El proveedor no informa la ubicación. Vuelve a detectar los audios." }, style = MaterialTheme.typography.bodySmall, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                        } },
+                        leadingContent = { Icon(Icons.Outlined.Folder, null, tint = MaterialTheme.colorScheme.primary) },
+                        trailingContent = { if (folder.path.isNotBlank()) IconButton({ excludeFolder = folder }) { Icon(Icons.Outlined.FolderOff, "Excluir carpeta ${folder.path}") } },
+                        modifier = Modifier.clickable(onClickLabel = "Abrir carpeta ${Music.folderLabel(folder.path)}") { selectedFolder = folder.path; query = "" },
+                        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background)
+                    )
+                    HorizontalDivider()
+                }
+                if (data.excludedFolders.isNotEmpty()) {
+                    item { Section("Carpetas excluidas", "${data.excludedFolders.size}") }
+                    items(data.excludedFolders.sorted(), key = { "excluded:$it" }) { path ->
+                        ListItem(headlineContent = { Text(Music.folderLabel(path), maxLines = 2, overflow = TextOverflow.Ellipsis) },
+                            supportingContent = { Text(path, maxLines = 3, overflow = TextOverflow.Ellipsis) },
+                            leadingContent = { Icon(Icons.Outlined.FolderOff, null) },
+                            trailingContent = { IconButton({ vm.includeFolder(path) }) { Icon(Icons.Outlined.Restore, "Volver a incluir carpeta $path") } },
+                            colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background))
+                    }
+                    item { Text("Después de volver a incluir una carpeta, pulsa Detectar audios para cargarla.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                }
+            } else if (tab == 2 && playlist == null) {
                 item { Section("Tus listas", action = { TextButton({ editName = !editName; name = "" }) { Text("Crear lista") } }) }
                 if (editName) item { PlaylistName(name, { name = it }, "Crear", { vm.createPlaylist(name); editName = false; name = "" }, { editName = false }) }
                 if (data.playlists.isEmpty()) item { Info("Haz espacio para tus favoritas", "Crea una lista y añade canciones desde el menú de cada audio.", Icons.Outlined.PlaylistAdd) }
@@ -102,7 +142,15 @@ import co.tuvida.app.domain.Music
                 }
             } else {
                 item {
-                    Section(if (tab == 3) "Cola de reproducción" else playlist?.name ?: if (tab == 1) "Tus favoritos" else "Biblioteca", "${source.size} canciones")
+                    Section(if (tab == 4) Music.folderLabel(selectedFolder.orEmpty()) else if (tab == 3) "Cola de reproducción" else playlist?.name ?: if (tab == 1) "Tus favoritos" else "Biblioteca", "${source.size} canciones")
+                    if (tab == 0) TextButton({ tab = 4; selectedFolder = null; query = "" }) { Icon(Icons.Outlined.Folder, null); Spacer(Modifier.width(8.dp)); Text("Agrupar por carpetas") }
+                    if (tab == 4) {
+                        Text(selectedFolder.orEmpty(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextButton({ selectedFolder = null; query = "" }) { Text("Todas las carpetas") }
+                            if (!selectedFolder.isNullOrBlank()) TextButton({ excludeFolder = Music.Folder(selectedFolder!!, source) }) { Text("Excluir esta carpeta") }
+                        }
+                    }
                     if (playlist != null) {
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             TextButton({ selected = ""; editName = false; query = "" }) { Text("Todas las listas") }
@@ -115,7 +163,7 @@ import co.tuvida.app.domain.Music
                 if (editName && playlist != null) item { PlaylistName(name, { name = it }, "Guardar nombre", { vm.renamePlaylist(playlist.id, name); editName = false }, { editName = false }) }
                 if (source.isNotEmpty()) {
                     item { Field("Buscar título, artista o álbum", query, { query = it }) }
-                    if (tab < 2) item { Choice("Ordenar", sort, linkedMapOf("title" to "Título", "artist" to "Artista", "duration" to "Duración", "added" to "Añadidas recientemente"), { sort = it }) }
+                    if (tab < 2 || tab == 4) item { Choice("Ordenar", sort, linkedMapOf("title" to "Título", "artist" to "Artista", "duration" to "Duración", "added" to "Añadidas recientemente"), { sort = it }) }
                 }
                 if (songs.isEmpty()) item {
                     Info(when { query.isNotBlank() -> "No hay coincidencias"; tab == 1 -> "Tus favoritos van aquí"; tab == 3 -> "La cola está vacía"; playlist != null -> "Añade canciones a esta lista"; else -> "Empieza con tus canciones" },
@@ -149,6 +197,11 @@ import co.tuvida.app.domain.Music
     }
     delete?.let { p -> AlertDialog(onDismissRequest = { delete = null }, title = { Text("Eliminar ${p.name}") }, text = { Text("Se eliminará la lista. Las canciones seguirán en tu biblioteca y en el teléfono.") }, confirmButton = { TextButton({ vm.deletePlaylist(p.id); selected = ""; delete = null }) { Text("Eliminar lista") } }, dismissButton = { TextButton({ delete = null }) { Text("Cancelar") } }) }
     remove?.let { song -> AlertDialog(onDismissRequest = { remove = null }, title = { Text("Quitar ${song.title}") }, text = { Text("Se quitará de la biblioteca, favoritos, listas y cola. El archivo del teléfono se conserva.") }, confirmButton = { TextButton({ vm.removeSong(song.uri); remove = null }) { Text("Quitar canción") } }, dismissButton = { TextButton({ remove = null }) { Text("Cancelar") } }) }
+    excludeFolder?.let { folder -> AlertDialog(onDismissRequest = { excludeFolder = null },
+        title = { Text("Excluir ${Music.folderLabel(folder.path)}") },
+        text = { Text("Se quitarán ${folder.songs.size} audios de la biblioteca, favoritos, listas y cola. Sus archivos seguirán en el teléfono. Esta carpeta se omitirá en futuras detecciones; podrás volver a incluirla desde Carpetas excluidas.\n\n${folder.path}") },
+        confirmButton = { TextButton({ vm.excludeFolder(folder.path); selectedFolder = null; query = ""; excludeFolder = null }) { Text("Excluir carpeta") } },
+        dismissButton = { TextButton({ excludeFolder = null }) { Text("Cancelar") } }) }
 }
 
 @Composable private fun PlaylistName(name: String, change: (String) -> Unit, label: String, save: () -> Unit, cancel: () -> Unit) {
@@ -162,8 +215,8 @@ import co.tuvida.app.domain.Music
     var expanded by remember { mutableStateOf(false) }
     ListItem(headlineContent = { Text(song.title, maxLines = 2, overflow = TextOverflow.Ellipsis) },
         supportingContent = { Text("${song.artist.ifBlank { "Artista desconocido" }}${if (song.album.isNotBlank()) " · ${song.album}" else ""} · ${Music.time(song.duration)}", maxLines = 2, overflow = TextOverflow.Ellipsis) },
-        leadingContent = { Icon(if (current) Icons.Outlined.GraphicEq else Icons.Outlined.MusicNote, if (current) "Canción actual" else null, tint = MaterialTheme.colorScheme.primary) },
-        modifier = Modifier.clickable(onClickLabel = "Reproducir ${song.title}", onClick = play),
+        leadingContent = { SongCover(song) },
+        modifier = Modifier.clickable(onClickLabel = "Reproducir ${song.title}", onClick = play).semantics { if (current) contentDescription = "Canción actual: ${song.title}" },
         trailingContent = { Row {
             IconButton(favoriteAction) { Icon(if (favorite) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder, "${if (favorite) "Quitar favorito" else "Marcar favorito"}: ${song.title}", tint = MaterialTheme.colorScheme.primary) }
             Box {
@@ -179,7 +232,7 @@ import co.tuvida.app.domain.Music
     Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = MaterialTheme.shapes.large) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.Album, null, Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary)
+                SongCover(song, 72.dp)
                 Column(Modifier.weight(1f).padding(start = 12.dp)) {
                     Text(song.title, style = MaterialTheme.typography.titleLarge, maxLines = 3, overflow = TextOverflow.Ellipsis)
                     Text(song.artist.ifBlank { "Artista desconocido" }, style = MaterialTheme.typography.bodyMedium)

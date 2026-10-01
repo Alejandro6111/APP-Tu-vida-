@@ -21,7 +21,7 @@ data class CalendarSource(val id: String, val name: String, val account: String)
 data class AgendaEvent(val id: String, val title: String, val start: Long, val end: Long, val source: String, val allDay: Boolean = false)
 data class SyncStatus(val source: String, val updated: Long = 0, val error: String = "")
 data class Preferences(
-    val theme: String = "system", val notifications: Boolean = true, val intensity: String = "intense",
+    val theme: String = "dark", val notifications: Boolean = true, val intensity: String = "intense",
     val leadMinutes: Int = 30, val quietStart: Int = 22, val quietEnd: Int = 7,
     val quietEnabled: Boolean = true, val exerciseReminder: Boolean = true, val exerciseHour: Int = 18,
     val studyReminders: Boolean = true, val studyKeywords: String = "estudio,clase,curso,study",
@@ -42,10 +42,11 @@ data class AppData(
     val music: MusicLibrary = MusicLibrary()
 )
 
-data class Song(val uri: String = "", val title: String = "", val artist: String = "", val album: String = "", val duration: Long = 0)
+data class Song(val uri: String = "", val title: String = "", val artist: String = "", val album: String = "", val duration: Long = 0, val folder: String = "")
 data class MusicPlaylist(val id: String = newId(), val name: String = "", val songs: List<String> = emptyList())
 data class MusicLibrary(
     val songs: List<Song> = emptyList(), val favorites: Set<String> = emptySet(),
     val playlists: List<MusicPlaylist> = emptyList(), val queue: List<String> = emptyList(),
-    val current: String = "", val position: Long = 0, val repeat: Int = 0, val shuffle: Boolean = false
+    val current: String = "", val position: Long = 0, val repeat: Int = 0, val shuffle: Boolean = false,
+    val excludedFolders: Set<String> = emptySet()
 )

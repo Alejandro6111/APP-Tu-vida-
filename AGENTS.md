@@ -22,7 +22,8 @@ Los datos se guardan en `filesDir/tuvida.json` mediante `AtomicFile` y un `Store
 - `platform/Reminders.kt`: canales Android, AlarmManager, receptores, completar y posponer.
 - `platform/Widgets.kt` y `res/xml/widget_*.xml`: agenda, finanzas, salud y enfoque.
 - `ui/App.kt`: navegación adaptativa, editores, permisos y selector de documentos.
-- `ui/Theme.kt`: colores Material claros/oscuros y fuente Semibold.
+- `ui/Theme.kt`: negro/dorado en oscuro y marfil/dorado en claro, roles Material y fuente Semibold.
+- `platform/SongArtwork.kt`, `ui/SongCover.kt`: portadas incrustadas locales, caché y vinilos geométricos para audios sin imagen; portada también en los controles multimedia.
 - `ui/Components.kt`, `ui/Editors.kt`, `ui/*Screen*.kt`: controles, formularios y pantallas.
 - `ui/AppViewModel.kt`: coordinación, importación/exportación y operaciones de interfaz.
 - `MainActivity.kt`, `TuVidaApplication.kt`: inicio, estado único y ciclo de vida.

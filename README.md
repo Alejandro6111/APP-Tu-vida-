@@ -1,8 +1,9 @@
 # Tu Vida · Android
 
-Tu app personal para reunir dinero, agenda, estudio, salud y música. **Android nativo con Kotlin y Jetpack Compose**, diseñado para Redmi 13 y compatible con Android 8 o posterior. Interfaz en español, paleta verde petróleo, marfil y dorado, temas claro/oscuro y tipografía Semibold.
+Tu app personal para reunir dinero, agenda, estudio, salud y música. **Android nativo con Kotlin y Jetpack Compose**, diseñado para Redmi 13 y compatible con Android 8 o posterior. Interfaz en español, paleta negro y dorado con acentos salvia, cobre y ciruela, temas claro/oscuro y tipografía Semibold. Las instalaciones nuevas empiezan en oscuro; al actualizar se conserva el tema elegido. Para ver el fondo negro, selecciona **Ajustes → Tema → Oscuro**; el tema claro combina marfil, negro y dorado.
 
 <p><img src="docs/images/hoy.png" width="240" alt="Pantalla Hoy con datos de ejemplo" /> <img src="docs/images/salud.png" width="240" alt="Calendario de salud con ejercicio y descanso registrados" /> <img src="docs/images/dinero-oscuro.png" width="240" alt="Finanzas en tema oscuro con datos de ejemplo" /></p>
+<p><img src="docs/images/musica-oscuro.png" width="240" alt="Música en negro y dorado con portada local de vinilo" /> <img src="docs/images/musica-carpetas.png" width="240" alt="Carpetas del sistema con audios de prueba y acción de excluir" /></p>
 
 Capturas reales del emulador Android; los datos mostrados son ejemplos de verificación.
 
@@ -17,6 +18,7 @@ Al abrir:
 3. Permite notificaciones y alarmas precisas desde Ajustes. En HyperOS/MIUI, revisa **Inicio automático**, **Notificaciones** y **Batería → Sin restricciones** para Tu Vida. El teléfono conserva el control final sobre la entrega de los avisos.
 4. Mantén pulsada la pantalla principal → **Widgets → Tu Vida** para añadir Agenda, Finanzas, Salud y Enfoque.
 5. Abre **Música** desde el icono de nota musical superior o **Hoy → Escuchar mi música**. Pulsa **Detectar audios** para autorizar y leer los audios del teléfono, o **Añadir canciones** para elegir varios archivos con el selector Android. El permiso de audios se solicita únicamente al pulsar Detectar; elegir archivos no necesita acceso general al almacenamiento.
+6. En **Música → Carpetas**, o **Biblioteca → Agrupar por carpetas**, abre una carpeta para ver y reproducir sus audios. Usa el icono de carpeta excluida o **Excluir esta carpeta** para retirar un bloque, como audios de WhatsApp. La confirmación muestra la ruta y cantidad; los archivos permanecen en el teléfono. La exclusión se recuerda al detectar de nuevo. Desde **Carpetas excluidas** puedes volver a incluirla y pulsar Detectar audios.
 
 Para actualizar desde 1.0.0, instala el nuevo APK sobre la app existente, sin desinstalarla: conserva los datos locales cuando Android acepta la misma firma.
 
@@ -68,6 +70,8 @@ Los feeds públicos pueden cambiar horarios o no tener encuentros futuros. Tu Vi
 ### Música local, sin anuncios
 
 - Biblioteca de audios del teléfono y selección de varios archivos con acceso persistente de Android. Se leen título, artista, álbum y duración; búsqueda que ignora acentos y orden por título, artista, duración o adición reciente.
+- Agrupación por carpetas reales, diferenciando ruta completa y volumen de almacenamiento; búsqueda de carpetas, contador de audios/duración y reproducción del contenido de cada una. Excluir una carpeta limpia sus referencias en biblioteca, favoritos, listas y cola, sin borrar archivos, y la omite en futuras detecciones/importaciones. Volver a incluirla permite cargarla de nuevo con Detectar audios.
+- Portadas locales: muestra la imagen incrustada cuando existe; si falta, genera un vinilo geométrico estable por canción con variaciones dorado/cobre/salvia/ciruela. Aparecen en biblioteca, favoritos, listas, cola, reproductor y minirreproductor; los controles multimedia Android reciben la portada generada. Lectura en segundo plano, concurrencia limitada y caché de imágenes; sin búsquedas ni descargas de imágenes.
 - Favoritos y listas persistentes: crear, renombrar, eliminar, añadir/quitar canciones y cambiar su orden. Eliminar una lista o quitar una canción de la biblioteca **no borra archivos del teléfono**.
 - Reproducir una canción o todo el conjunto visible, pausa/continuación, anterior/siguiente y deslizador para avanzar dentro del audio.
 - Repetición desactivada, de una canción o de toda la cola; modo aleatorio independiente. Cola con reproducción directa, añadir al final o después de la actual, quitar y mover canciones. Si una referencia de audio ya está en la cola, la app te avisa.
@@ -121,11 +125,13 @@ bash gradlew connectedDebugAndroidTest
 
 Las pruebas cubren saldo arrastrado, pagos reales, gastos diarios, frecuencias, cuotas, festivos, ahorro, proyección, presupuesto, deudas, categorías, copias, recurrencias iCal, excepciones, horarios de silencio, repetición de tareas, transición de pomodoro y biblioteca/listas de música. Las pruebas en Android reproducen archivos WAV reales de ejemplo, comprueban lectura local, favoritos/listas, segundo plano, guardado de cola/modos/posición y temporizador, y capturan el control multimedia de sistema. Los reportes se generan en `android/app/build/reports/`.
 
-La actualización 1.1.0 pasó **70 pruebas JVM y 10 pruebas en Android 15**, además de compilación y lint sin errores (12 avisos no bloqueantes). Las comprobaciones de interfaz en emulador y el alcance final se registran en [docs/VERIFICATION.md](docs/VERIFICATION.md). El permiso real de la cuenta Google, el control físico de audífonos y las restricciones de HyperOS necesitan comprobarse en tu Redmi.
+La actualización 1.2.0 pasó **77 pruebas JVM y 12 pruebas en Android 15**, además de compilación y lint sin errores (12 avisos no bloqueantes). Se comprueba exclusión de una carpeta durante la reproducción, limpieza de referencias, conservación de archivos, omisión al detectar otra vez, restauración de la carpeta, compatibilidad de copias anteriores y portadas locales. Las comprobaciones de interfaz en emulador y el alcance final se registran en [docs/VERIFICATION.md](docs/VERIFICATION.md). El permiso real de la cuenta Google, el control físico de audífonos y las restricciones de HyperOS necesitan comprobarse en tu Redmi.
 
 ## Estructura y cambios
 
 Consulta [AGENTS.md](AGENTS.md) para el mapa detallado y las reglas de trabajo; también se incluye `agents.ms`, como solicitaste. Las referencias originales se conservan en `Proyectos de apoyo/`. El desarrollo principal está en `android/app/src/main/java/co/tuvida/app/`, separado en `data`, `domain`, `platform` y `ui`.
+
+**1.2.0:** negro y dorado en la app, icono y widgets; carpetas reales con exclusión persistente y restauración; portadas locales para canciones descargadas. Las copias anteriores a 1.2.0 se cargan con carpetas desconocidas y sin exclusiones; Detectar audios actualiza su ubicación. Las nuevas copias conservan rutas y exclusiones. Si un proveedor de documentos no informa la ruta, el audio aparece en «Carpeta no disponible» y puede quitarse individualmente.
 
 **1.1.0:** reproductor de música local sin anuncios, biblioteca, favoritos, listas, cola, repetición, aleatorio, controles de sistema y temporizador para dormir. Conserva la pantalla al cambiar el tamaño de letra o recrear la Activity.
 

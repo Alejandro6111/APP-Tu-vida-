@@ -17,7 +17,7 @@ Reunir finanzas, agenda, partidos, tareas, estudio, salud y música local sin an
 Portar todas las capacidades financieras de Mi Plata Clara. Integrar calendarios Google del teléfono; partidos del FC Barcelona, Colombia y Millonarios desde las fuentes de Aurora. Pomodoros y cronómetros configurables; recordatorios basados en agenda; registro diario de comidas y ejercicio con calendario verde/rojo. Notificaciones intensas configurables. README actualizado y AGENTS.md con mapa y regla de commit y push tras cambios satisfactorios.
 
 ## Brand Commitments
-Paleta elegante y Segoe UI Semibold solicitadas. La fuente exacta requiere un archivo con licencia de distribución; soporte para incluirlo, sin publicar archivos de fuentes propietarias del sistema.
+Negro y dorado solicitados por el usuario, con colores complementarios salvia, cobre y ciruela; variante clara marfil y dorado. Segoe UI Semibold solicitada. La fuente exacta requiere un archivo con licencia de distribución; soporte para incluirlo, sin publicar archivos de fuentes propietarias del sistema.
 
 ## Evidence on Hand
 Proyectos de apoyo/Mis finanzas y creditos y Proyectos de apoyo/Star.me personal. Repositorio Alejandro6111/APP-Tu-vida-.

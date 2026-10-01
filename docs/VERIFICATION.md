@@ -64,8 +64,30 @@ La revisión independiente pidió exponer el estado y acción del favorito del a
 
 Las pruebas existentes de notificaciones ahora esperan la notificación específica hasta cinco segundos y conceden el permiso mediante UiAutomation; evitan asumir que Android publica la notificación inmediatamente o que no existen otras notificaciones multimedia.
 
-**APK actual:** `artifacts/Tu-Vida-Android.apk`, 21.965.543 bytes.
+**APK 1.1.0 verificado en esa actualización:** `artifacts/Tu-Vida-Android.apk`, 21.965.543 bytes.
 
 **SHA-256:** `7A6E7277D1E3512BE99D11534F1EA5589A364FCE780A6D8A8FD290A1140435BC`.
 
 Se mantiene el alcance del emulador: no se instaló en Redmi ni se probó HyperOS. Los archivos de audio y permisos de documentos no viajan dentro de la copia JSON. Una biblioteca restaurada en otro teléfono puede requerir volver a seleccionar archivos y rehacer sus referencias en las listas.
+
+## Actualización 1.2.0 · negro/dorado, carpetas y portadas
+
+Verificada el **30 de septiembre de 2026**, fecha del usuario en America/Bogota.
+
+`assembleDebug testDebugUnitTest lintDebug connectedDebugAndroidTest` completó correctamente: **77 pruebas JVM, 12 pruebas Android en emulador Android 15, cero errores de lint y 12 avisos no bloqueantes**. Los reportes están en `android/app/build/reports/`.
+
+Las siete pruebas de dominio nuevas comprueban separación de carpetas por ruta/volumen, limpieza de favoritos/listas/cola/posición al excluir, exclusión persistente en futuras detecciones, reincorporación, actualización de referencias antiguas que todavía no tenían carpeta, compatibilidad de JSON anterior, conservación de exclusiones en copias y rechazo de ubicaciones/descripciones inválidas.
+
+La prueba nativa de carpetas crea tres WAV de ejemplo en dos carpetas de MediaStore. Comprueba que la lectura individual y la detección informan la misma carpeta; abre y reproduce el conjunto, cancela una exclusión y verifica que no cambió la biblioteca; confirma la exclusión durante la reproducción y comprueba que el reproductor retira ambos audios, las referencias se limpian y los dos archivos siguen siendo legibles. Detectar otra vez omite los audios excluidos; volver a incluir la carpeta y detectar recupera los tres. El nombre «WhatsApp Audio» corresponde a una carpeta sintética bajo `Music/TuVidaTests`, no a datos reales de WhatsApp ni a una prueba en HyperOS.
+
+La otra prueba nativa nueva verifica una portada local de 192 × 192 para una descarga sin imagen, bytes PNG válidos y estables, y presencia de la portada en los metadatos de Media3. La extracción de portadas incrustadas se implementa mediante MediaMetadataRetriever; esta prueba usa WAV sin imagen incrustada.
+
+Se inspeccionaron 15 capturas nativas: Música clara/oscura, letra 1.3, lista, cola, minirreproductor, control multimedia Android, listado de carpetas, canciones de una carpeta, confirmación de exclusión, carpeta excluida, Hoy, Salud, Dinero oscuro y Ajustes oscuro. Se restauró la escala a 1.0. Las capturas completas quedan en `.impeccable/review/` y las representativas publicables en `docs/images/`. Los textos, vinilos y controles son legibles en las variantes inspeccionadas; las tabs y las acciones se desplazan según el tamaño del texto.
+
+Los pares de texto de los roles principales, contenedores, superficies y errores en ambos esquemas tienen contraste calculado de **6,76:1 a 16,78:1**. No se ejecutó el detector web: el producto es Compose nativo. La paleta también se aplica al icono y a los recursos de widgets. Las instalaciones nuevas usan oscuro; la actualización conserva el tema que ya estaba guardado.
+
+**APK actual 1.2.0:** `artifacts/Tu-Vida-Android.apk`, **22.229.640 bytes**.
+
+**SHA-256:** `838640FD4266EE4EA89C8B765D1775A2B3E69CD48E94AEA20191F1ADBA28D59C`.
+
+Alcance: teléfono emulado Android 15; sin instalación en Redmi, pruebas de tablet, audífonos físicos ni auditoría TalkBack. Los proveedores que no revelan la ubicación se agrupan en «Carpeta no disponible»; allí se pueden quitar canciones individualmente. Excluir una carpeta afecta su ruta exacta: las subcarpetas aparecen como grupos separados. Las portadas y agrupación consultan únicamente archivos locales; las referencias y permisos de documentos mantienen los límites de restauración descritos para 1.1.0.

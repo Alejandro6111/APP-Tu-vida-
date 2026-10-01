@@ -66,7 +66,8 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val songs = AudioFiles.scan(app)
                 app.store.update { it.copy(music = Music.merge(it.music, songs)) }
-                message.value = if (songs.isEmpty()) "Android no encontró audios. Puedes elegir tus archivos con Añadir canciones." else "Se encontraron ${songs.size} audios en el teléfono."
+                val ignored = songs.count { it.folder in app.store.current.music.excludedFolders }
+                message.value = if (songs.isEmpty()) "Android no encontró audios. Puedes elegir tus archivos con Añadir canciones." else "${songs.size - ignored} audios detectados.${if (ignored > 0) " $ignored omitidos de carpetas excluidas." else ""}"
             } catch (_: Exception) { message.value = "No se pudieron leer los audios. Revisa el permiso de música o usa Añadir canciones." }
             finally { busy.value = false }
         }
@@ -84,7 +85,8 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
             }
             try {
                 app.store.update { it.copy(music = Music.merge(it.music, songs)) }
-                message.value = "${songs.size} canciones añadidas.${if (failed > 0) " No se pudieron abrir $failed archivos; elige audios disponibles en el teléfono." else ""}"
+                val ignored = songs.count { it.folder in app.store.current.music.excludedFolders }
+                message.value = "${songs.size - ignored} canciones añadidas.${if (ignored > 0) " $ignored pertenecen a carpetas excluidas; vuelve a incluirlas desde Carpetas." else ""}${if (failed > 0) " No se pudieron abrir $failed archivos; elige audios disponibles en el teléfono." else ""}"
             } catch (e: Exception) { message.value = e.message ?: "No se pudo guardar la biblioteca." }
             finally { busy.value = false }
         }
@@ -119,6 +121,23 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     fun removeFromPlaylist(id: String, uri: String) = edit { it.copy(playlists = it.playlists.map { p -> if (p.id == id) p.copy(songs = p.songs - uri) else p }) }
     fun playlistMove(id: String, uri: String, offset: Int) = edit { it.copy(playlists = it.playlists.map { p -> if (p.id == id) p.copy(songs = Music.move(p.songs, uri, offset)) else p }) }
     fun removeSong(uri: String) { queueRemove(uri); edit { Music.remove(it, uri) } }
+    fun excludeFolder(path: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                var removed = emptyList<String>()
+                app.store.update {
+                    removed = it.music.songs.filter { song -> song.folder == path }.map { song -> song.uri }
+                    it.copy(music = Music.excludeFolder(it.music, path))
+                }
+                withContext(Dispatchers.Main) { removed.forEach(::queueRemove) }
+                message.value = "Carpeta excluida. Sus archivos se conservan en el teléfono."
+            }.onFailure { message.value = it.message ?: "No se pudo excluir esta carpeta." }
+        }
+    }
+    fun includeFolder(path: String) = edit {
+        message.value = "Carpeta incluida. Pulsa Detectar audios para cargarla de nuevo."
+        it.copy(excludedFolders = it.excludedFolders - path)
+    }
     fun sleep(minutes: Int) = sleepCommand(MusicService.SLEEP, Bundle().apply { putInt("minutes", minutes) })
     private fun sleepCommand(action: String, args: Bundle = Bundle.EMPTY) {
         val result = controller?.sendCustomCommand(SessionCommand(action, Bundle.EMPTY), args) ?: return
